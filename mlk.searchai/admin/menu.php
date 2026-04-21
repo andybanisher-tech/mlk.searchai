@@ -1,37 +1,25 @@
-<?php
-require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_before.php");
+<?
+use Bitrix\Main\Localization\Loc;
 
-global $APPLICATION;
+Loc::loadMessages(__FILE__);
 
-$moduleId = 'mlk.searchai';
-
-$aMenu = [
-    [
-        'parent_menu' => 'global_menu_mlk_searchai',
-        'section' => 'searchai_settings',
-        'title' => GetMessage('MLK_SEARCHAI_SETTINGS'),
-        'url' => 'options.php?mid=' . $moduleId . '&lang=' . LANGUAGE_ID,
-        'icon' => 'searchai_settings_icon',
-        'page_icon' => 'searchai_page_icon'
+$menu = [
+    "parent_menu" => "global_menu_services", // Раздел, в котором появится меню
+    "section" => "mlk_searchai",
+    "sort" => 100,
+    "text" => Loc::getMessage("MLK_SEARCHAI_MENU_TEXT"),
+    "title" => Loc::getMessage("MLK_SEARCHAI_MENU_TITLE"),
+    "icon" => "mlk_searchai_menu_icon",
+    "page_icon" => "mlk_searchai_page_icon",
+    "items_id" => "menu_mlk_searchai",
+    "items" => [
+        [
+            "text" => Loc::getMessage("MLK_SEARCHAI_MENU_ITEM_SETTINGS"),
+            "url" => "settings.php?mid=mlk.searchai&lang=" . LANGUAGE_ID,
+            "more_url" => [],
+        ],
+        // Здесь можно добавить дополнительные пункты меню
     ],
-    [
-        'parent_menu' => 'global_menu_mlk_searchai',
-        'section' => 'searchai_index',
-        'title' => GetMessage('MLK_SEARCHAI_INDEX'),
-        'url' => 'index.php?lang=' . LANGUAGE_ID,
-        'icon' => 'searchai_index_icon',
-        'page_icon' => 'searchai_page_icon'
-    ],
-    [
-        'parent_menu' => 'global_menu_mlk_searchai',
-        'section' => 'searchai_logs',
-        'title' => GetMessage('MLK_SEARCHAI_LOGS'),
-        'url' => 'logs.php?lang=' . LANGUAGE_ID,
-        'icon' => 'searchai_logs_icon',
-        'page_icon' => 'searchai_page_icon'
-    ]
 ];
 
-$APPLICATION->AddSideMenu($aMenu);
-
-require_once($_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/main/include/prolog_admin_after.php");
+return $menu;

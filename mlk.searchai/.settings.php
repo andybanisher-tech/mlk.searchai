@@ -2,13 +2,8 @@
 return [
     'controllers' => [
         'value' => [
-            'defaultNamespace' => '\\YourPartner\\Searchai\\Controller',
+            'defaultNamespace' => '\\Mlk\\Searchai\\Controller',
         ],
         'readonly' => true,
-    ],
-    'userField' => [
-        'value' => [
-            'access' => '\\YourPartner\\Searchai\\UserFieldAccess',
-        ],
     ],
 ];
