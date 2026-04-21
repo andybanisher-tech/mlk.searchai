@@ -1,0 +1,22 @@
+<?php
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_OPTIONS_TITLE'] = 'Настройки модуля поиска с AI';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_OPTIONS_SAVED'] = 'Настройки сохранены';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_LLM_SECTION'] = 'Настройки LLM';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_LLM_API_KEY'] = 'API ключ';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_LLM_API_KEY_DESC'] = 'Введите ваш API ключ для доступа к LLM';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_LLM_API_ENDPOINT'] = 'Конечная точка API';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_LLM_API_ENDPOINT_DESC'] = 'URL API (например, https://api.openai.com/v1)';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_LLM_MODEL'] = 'Модель';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_LLM_MODEL_DESC'] = 'Имя модели (например, gpt-3.5-turbo)';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_SEARCH_SECTION'] = 'Настройки поиска';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_SEARCH_LIMIT'] = 'Лимит результатов';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_SEARCH_LIMIT_DESC'] = 'Максимальное количество результатов поиска';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_CACHE_SECTION'] = 'Настройки кэширования';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_CACHE_LIFETIME'] = 'Время жизни кэша (сек)';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_CACHE_LIFETIME_DESC'] = 'Время в секундах перед обновлением кэша';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_INDEXING_SECTION'] = 'Настройки индексации';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_INDEXING_ENABLED'] = 'Включить индексацию';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_INDEXING_AUTO'] = 'Автоматическая индексация';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_INDEXING_AUTO_DESC'] = 'Автоматически индексировать новые элементы';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_SAVE'] = 'Сохранить';
+$MESS['YOUR_PARTNER_CODE_SEARCHAI_CANCEL'] = 'Отмена';
