@@ -1,4 +1,5 @@
 <?
+
 use Bitrix\Main\ModuleManager;
 use Bitrix\Main\Application;
 use Bitrix\Main\EventManager;
@@ -32,8 +33,7 @@ class mlk_searchai extends CModule
     {
         global $DOCUMENT_ROOT, $APPLICATION;
 
-        if (!ModuleManager::isModuleInstalled("iblock"))
-        {
+        if (!ModuleManager::isModuleInstalled("iblock")) {
             $APPLICATION->ThrowException(GetMessage("SEARCHAI_NEED_IBLOCK"));
             return false;
         }
@@ -61,8 +61,7 @@ class mlk_searchai extends CModule
         $this->errors = $DB->RunSQLBatch(
             $_SERVER["DOCUMENT_ROOT"] . "/local/modules/" . $this->MODULE_ID . "/install/db/" . strtolower($DBType) . "/install.sql"
         );
-        if ($this->errors !== false)
-        {
+        if ($this->errors !== false) {
             $APPLICATION->ThrowException(implode("", $this->errors));
             return false;
         }
@@ -75,8 +74,7 @@ class mlk_searchai extends CModule
         $this->errors = $DB->RunSQLBatch(
             $_SERVER["DOCUMENT_ROOT"] . "/local/modules/" . $this->MODULE_ID . "/install/db/" . strtolower($DBType) . "/uninstall.sql"
         );
-        if ($this->errors !== false)
-        {
+        if ($this->errors !== false) {
             $APPLICATION->ThrowException(implode("", $this->errors));
             return false;
         }
@@ -111,32 +109,43 @@ class mlk_searchai extends CModule
 
     function InstallFiles()
     {
-        CopyDirFiles(
-            $_SERVER["DOCUMENT_ROOT"] . "/local/modules/" . $this->MODULE_ID . "/install/admin",
-            $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin",
-            true,
-            true
-        );
-        CopyDirFiles(
-            $_SERVER["DOCUMENT_ROOT"] . "/local/modules/" . $this->MODULE_ID . "/install/components",
-            $_SERVER["DOCUMENT_ROOT"] . "/local/components",
-            true,
-            true
-        );
+        $moduleRoot = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID;
+        $sourceComponents = $moduleRoot . "/install/components/mlk";
+        $targetComponents = $_SERVER["DOCUMENT_ROOT"] . "/local/components/mlk";
+
+        if (is_dir($sourceComponents)) {
+            if (!is_dir($targetComponents)) {
+                mkdir($targetComponents, 0755, true);
+            }
+            CopyDirFiles($sourceComponents, $targetComponents, true, true);
+        }
+
+        // Админские файлы (если есть)
+        $sourceAdmin = $moduleRoot . "/install/admin";
+        $targetAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin";
+        if (is_dir($sourceAdmin)) {
+            CopyDirFiles($sourceAdmin, $targetAdmin, true, true);
+        }
+
         return true;
     }
 
     function UnInstallFiles()
     {
-        DeleteDirFiles(
-            $_SERVER["DOCUMENT_ROOT"] . "/local/modules/" . $this->MODULE_ID . "/install/admin",
-            $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin"
-        );
-        DeleteDirFiles(
-            $_SERVER["DOCUMENT_ROOT"] . "/local/modules/" . $this->MODULE_ID . "/install/components",
-            $_SERVER["DOCUMENT_ROOT"] . "/local/components/mlk"
-        );
+        // Удаляем только папку нашего компонента
+        $targetComponents = $_SERVER["DOCUMENT_ROOT"] . "/local/components/mlk/search.ai";
+        if (is_dir($targetComponents)) {
+            DeleteDirFilesEx("/local/components/mlk/search.ai");
+        }
+
+        // Админские файлы (если есть)
+        $moduleRoot = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID;
+        $sourceAdmin = $moduleRoot . "/install/admin";
+        $targetAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin";
+        if (is_dir($sourceAdmin)) {
+            DeleteDirFiles($sourceAdmin, $targetAdmin);
+        }
+
         return true;
     }
 }
-?>
