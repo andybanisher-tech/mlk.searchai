@@ -5,6 +5,8 @@ use Bitrix\Main\Application;
 use Bitrix\Main\EventManager;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Config\Option;
+use Bitrix\Main\IO\Directory;
+use Bitrix\Main\IO\File;
 
 class mlk_searchai extends CModule
 {
@@ -109,22 +111,54 @@ class mlk_searchai extends CModule
 
     function InstallFiles()
     {
-        $moduleRoot = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID;
-        $sourceComponents = $moduleRoot . "/install/components/mlk";
+        // Копирование компонента в /local/components/
+        $sourceComponents = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/components/mlk";
         $targetComponents = $_SERVER["DOCUMENT_ROOT"] . "/local/components/mlk";
 
-        if (is_dir($sourceComponents)) {
-            if (!is_dir($targetComponents)) {
-                mkdir($targetComponents, 0755, true);
+        if (!is_dir($sourceComponents)) {
+            $GLOBALS["APPLICATION"]->ThrowException("Исходная папка компонентов не найдена: " . $sourceComponents);
+            return false;
+        }
+
+        // Создаём целевую директорию с правами по умолчанию
+        $dir = Directory::createDirectory($targetComponents);
+        if (!$dir) {
+            $GLOBALS["APPLICATION"]->ThrowException("Не удалось создать папку: " . $targetComponents);
+            return false;
+        }
+
+        // Рекурсивное копирование
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($sourceComponents, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            $targetPath = $targetComponents . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
+            if ($item->isDir()) {
+                Directory::createDirectory($targetPath);
+            } else {
+                $sourceFile = $item->getPathname();
+                File::copyFile($sourceFile, $targetPath);
             }
-            CopyDirFiles($sourceComponents, $targetComponents, true, true);
         }
 
         // Админские файлы (если есть)
-        $sourceAdmin = $moduleRoot . "/install/admin";
+        $sourceAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/admin";
         $targetAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin";
         if (is_dir($sourceAdmin)) {
-            CopyDirFiles($sourceAdmin, $targetAdmin, true, true);
+            $iteratorAdmin = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($sourceAdmin, \RecursiveDirectoryIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
+            foreach ($iteratorAdmin as $item) {
+                $targetPath = $targetAdmin . DIRECTORY_SEPARATOR . $iteratorAdmin->getSubPathName();
+                if ($item->isDir()) {
+                    Directory::createDirectory($targetPath);
+                } else {
+                    File::copyFile($item->getPathname(), $targetPath);
+                }
+            }
         }
 
         return true;
@@ -132,19 +166,17 @@ class mlk_searchai extends CModule
 
     function UnInstallFiles()
     {
-        // Удаляем только папку нашего компонента
+        // Удаляем папку компонента
         $targetComponents = $_SERVER["DOCUMENT_ROOT"] . "/local/components/mlk/search.ai";
         if (is_dir($targetComponents)) {
-            DeleteDirFilesEx("/local/components/mlk/search.ai");
+            Directory::deleteDirectory($targetComponents);
         }
 
-        // Админские файлы (если есть)
-        $moduleRoot = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID;
-        $sourceAdmin = $moduleRoot . "/install/admin";
-        $targetAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin";
-        if (is_dir($sourceAdmin)) {
-            DeleteDirFiles($sourceAdmin, $targetAdmin);
-        }
+        // Удаляем админские файлы
+        DeleteDirFiles(
+            $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/admin",
+            $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin"
+        );
 
         return true;
     }
