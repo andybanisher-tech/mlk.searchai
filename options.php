@@ -1,4 +1,5 @@
 <?
+
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\Loader;
@@ -37,14 +38,13 @@ $arAllOptions = [
     ],
     'llm' => [
         ['llm_enable', Loc::getMessage('MLK_SEARCHAI_LLM_ENABLE'), 'Y', ['checkbox']],
-        ['llm_provider', Loc::getMessage('MLK_SEARCHAI_LLM_PROVIDER'), 'groq', ['select', [
-            'groq' => 'Groq (бесплатно, быстрый)',
+        ['llm_provider', Loc::getMessage('MLK_SEARCHAI_LLM_PROVIDER'), 'mistral', ['select', [
             'mistral' => 'Mistral AI (бесплатно)',
-            'openrouter' => 'OpenRouter (бесплатно)',
-            'custom' => 'Свой сервер'
+            'groq' => 'Groq (быстрый)',
+            'custom' => 'Свой сервер (OpenAI-совместимый)'
         ]]],
         ['llm_api_key', Loc::getMessage('MLK_SEARCHAI_LLM_API_KEY'), '', ['text', 50]],
-        ['llm_model', Loc::getMessage('MLK_SEARCHAI_LLM_MODEL'), 'llama-3.3-70b-versatile', ['text', 30]],
+        ['llm_model', Loc::getMessage('MLK_SEARCHAI_LLM_MODEL'), 'mistral-small', ['text', 30]],
         ['llm_base_url', Loc::getMessage('MLK_SEARCHAI_LLM_BASE_URL'), '', ['text', 50]]
     ],
     'suggestions' => [
@@ -53,12 +53,9 @@ $arAllOptions = [
 ];
 
 // Сохранение настроек
-if ($request->isPost() && check_bitrix_sessid())
-{
-    foreach ($arAllOptions as $tabOptions)
-    {
-        foreach ($tabOptions as $option)
-        {
+if ($request->isPost() && check_bitrix_sessid()) {
+    foreach ($arAllOptions as $tabOptions) {
+        foreach ($tabOptions as $option) {
             $name = $option[0];
             $value = $request->getPost($name);
             Option::set($module_id, $name, is_array($value) ? implode(',', $value) : $value);
@@ -68,44 +65,42 @@ if ($request->isPost() && check_bitrix_sessid())
 
 $tabControl = new CAdminTabControl('tabControl', $tabs);
 ?>
-<form method="post" action="<?=$APPLICATION->GetCurPage()?>?mid=<?=htmlspecialcharsbx($module_id)?>&lang=<?=LANGUAGE_ID?>">
-    <?=bitrix_sessid_post()?>
+<form method="post" action="<?= $APPLICATION->GetCurPage() ?>?mid=<?= htmlspecialcharsbx($module_id) ?>&lang=<?= LANGUAGE_ID ?>">
+    <?= bitrix_sessid_post() ?>
     <?
     $tabControl->Begin();
-    foreach ($arAllOptions as $tabName => $options)
-    {
+    foreach ($arAllOptions as $tabName => $options) {
         $tabControl->BeginNextTab();
-        foreach ($options as $option)
-        {
+        foreach ($options as $option) {
             $name = $option[0];
             $title = $option[1];
             $default = $option[2];
             $type = $option[3];
             $value = Option::get($module_id, $name, $default);
-            ?>
-            <tr>
-                <td width="40%"><?=$title?></td>
-                <td width="60%">
-                    <?if ($type[0] == 'text'):?>
-                        <input type="text" name="<?=$name?>" value="<?=htmlspecialcharsbx($value)?>" size="<?=$type[1]?>">
-                    <?elseif ($type[0] == 'checkbox'):?>
-                        <input type="checkbox" name="<?=$name?>" value="Y" <?=$value == 'Y' ? 'checked' : ''?>>
-                    <?elseif ($type[0] == 'select'):?>
-                        <select name="<?=$name?>">
-                            <?foreach ($type[1] as $key => $label):?>
-                                <option value="<?=$key?>" <?=$value == $key ? 'selected' : ''?>><?=$label?></option>
-                            <?endforeach?>
-                        </select>
-                    <?elseif ($type[0] == 'textarea'):?>
-                        <textarea name="<?=$name?>" rows="<?=$type[1]?>" cols="<?=$type[2]?>"><?=htmlspecialcharsbx($value)?></textarea>
-                    <?endif?>
-                </td>
-            </tr>
-            <?
+    ?>
+    <tr>
+        <td width="40%"><?= $title ?></td>
+        <td width="60%">
+            <? if ($type[0] == 'text'): ?>
+            <input type="text" name="<?= $name ?>" value="<?= htmlspecialcharsbx($value) ?>" size="<?= $type[1] ?>">
+            <? elseif ($type[0] == 'checkbox'): ?>
+            <input type="checkbox" name="<?= $name ?>" value="Y" <?= $value == 'Y' ? 'checked' : '' ?>>
+            <? elseif ($type[0] == 'select'): ?>
+            <select name="<?= $name ?>">
+                <? foreach ($type[1] as $key => $label): ?>
+                <option value="<?= $key ?>" <?= $value == $key ? 'selected' : '' ?>><?= $label ?></option>
+                <? endforeach ?>
+            </select>
+            <? elseif ($type[0] == 'textarea'): ?>
+            <textarea name="<?= $name ?>" rows="<?= $type[1] ?>" cols="<?= $type[2] ?>"><?= htmlspecialcharsbx($value) ?></textarea>
+            <? endif ?>
+        </td>
+    </tr>
+    <?
         }
     }
     $tabControl->Buttons();
     ?>
-    <input type="submit" name="save" value="<?=Loc::getMessage('MLK_SEARCHAI_SAVE')?>" class="adm-btn-save">
-    <?$tabControl->End();?>
+    <input type="submit" name="save" value="<?= Loc::getMessage('MLK_SEARCHAI_SAVE') ?>" class="adm-btn-save">
+    <? $tabControl->End(); ?>
 </form>
