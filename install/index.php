@@ -111,57 +111,58 @@ class mlk_searchai extends CModule
 
     function InstallFiles()
     {
-        // Копирование компонента в /local/components/
-        $sourceComponents = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/components/mlk";
-        $targetComponents = $_SERVER["DOCUMENT_ROOT"] . "/local/components/mlk";
+        $docRoot = rtrim($_SERVER["DOCUMENT_ROOT"], '/');
+        $modulePath = $docRoot . "/bitrix/modules/" . $this->MODULE_ID;
+        $sourceComponents = $modulePath . "/install/components/mlk";
+        $targetComponentsBase = $docRoot . "/local/components";
 
+        // 1. Проверяем, что исходная директория компонента существует
         if (!is_dir($sourceComponents)) {
             $GLOBALS["APPLICATION"]->ThrowException("Исходная папка компонентов не найдена: " . $sourceComponents);
             return false;
         }
 
-        // Создаём целевую директорию с правами по умолчанию
-        $dir = Directory::createDirectory($targetComponents);
-        if (!$dir) {
-            $GLOBALS["APPLICATION"]->ThrowException("Не удалось создать папку: " . $targetComponents);
-            return false;
-        }
-
-        // Рекурсивное копирование
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($sourceComponents, \RecursiveDirectoryIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::SELF_FIRST
-        );
-
-        foreach ($iterator as $item) {
-            $targetPath = $targetComponents . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
-            if ($item->isDir()) {
-                Directory::createDirectory($targetPath);
-            } else {
-                $sourceFile = $item->getPathname();
-                File::copyFile($sourceFile, $targetPath);
+        // 2. Создаём родительскую папку /local/components, если её нет
+        if (!is_dir($targetComponentsBase)) {
+            if (!mkdir($targetComponentsBase, 0755, true)) {
+                $GLOBALS["APPLICATION"]->ThrowException("Не удалось создать папку " . $targetComponentsBase);
+                return false;
             }
         }
 
-        // Админские файлы (если есть)
-        $sourceAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/admin";
-        $targetAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin";
+        // 3. Рекурсивно копируем mlk из source в /local/components/
+        $targetComponents = $targetComponentsBase . "/mlk";
+        $this->recurseCopy($sourceComponents, $targetComponents);
+
+        // 4. Админские файлы (если появятся)
+        $sourceAdmin = $modulePath . "/install/admin";
+        $targetAdmin = $docRoot . "/bitrix/admin";
         if (is_dir($sourceAdmin)) {
-            $iteratorAdmin = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($sourceAdmin, \RecursiveDirectoryIterator::SKIP_DOTS),
-                \RecursiveIteratorIterator::SELF_FIRST
-            );
-            foreach ($iteratorAdmin as $item) {
-                $targetPath = $targetAdmin . DIRECTORY_SEPARATOR . $iteratorAdmin->getSubPathName();
-                if ($item->isDir()) {
-                    Directory::createDirectory($targetPath);
-                } else {
-                    File::copyFile($item->getPathname(), $targetPath);
-                }
-            }
+            $this->recurseCopy($sourceAdmin, $targetAdmin);
         }
 
         return true;
+    }
+
+    // Приватный метод рекурсивного копирования
+    private function recurseCopy($src, $dst)
+    {
+        if (!is_dir($dst)) {
+            mkdir($dst, 0755, true);
+        }
+        $dir = opendir($src);
+        while (false !== ($file = readdir($dir))) {
+            if (($file != '.') && ($file != '..')) {
+                $srcFile = $src . '/' . $file;
+                $dstFile = $dst . '/' . $file;
+                if (is_dir($srcFile)) {
+                    $this->recurseCopy($srcFile, $dstFile);
+                } else {
+                    copy($srcFile, $dstFile);
+                }
+            }
+        }
+        closedir($dir);
     }
 
     function UnInstallFiles()
