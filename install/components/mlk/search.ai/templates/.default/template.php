@@ -40,10 +40,10 @@ $componentId = $arResult['COMPONENT_ID'];
 
             this.query = '';
             this.correctedQuery = null;
+            this.lastQuery = '';
             this.timer = null;
             this.selectedIndex = -1;
             this.results = [];
-            this.lastQuery = '';
 
             this.init();
         }
@@ -92,8 +92,8 @@ $componentId = $arResult['COMPONENT_ID'];
 
         SearchAI.prototype.fetchResults = function() {
             var self = this;
-            var prev = this.lastQuery; // предыдущий успешный запрос
-            this.lastQuery = this.query; // запоминаем текущий
+            var prev = this.lastQuery;
+            this.lastQuery = this.query;
 
             BX.ajax({
                 url: '/ajax/search.php',
@@ -101,7 +101,7 @@ $componentId = $arResult['COMPONENT_ID'];
                 data: {
                     query: this.query,
                     limit: this.limit,
-                    prevQuery: prev
+                    prev_query: prev
                 },
                 dataType: 'json',
                 onsuccess: function(response) {
@@ -126,11 +126,9 @@ $componentId = $arResult['COMPONENT_ID'];
             this.itemsDiv.innerHTML = '';
             this.selectedIndex = -1;
 
-            // Блок "Возможно, вы имели в виду"
             if (this.correctedQuery && this.correctedQuery !== this.query) {
                 this.correctedDiv.innerHTML = 'Возможно, вы имели в виду: <a href="#" class="mlk-search-corrected-link">' + BX.util.htmlspecialchars(this.correctedQuery) + '</a>';
                 this.correctedDiv.style.display = 'block';
-
                 var link = this.correctedDiv.querySelector('.mlk-search-corrected-link');
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -168,12 +166,17 @@ $componentId = $arResult['COMPONENT_ID'];
                 this.itemsDiv.appendChild(itemDiv);
             }
 
-            // Подсказки для дополнения запроса
             if (this.suggestions && this.suggestions.length) {
                 this.suggestionsDiv.style.display = 'block';
                 this.suggestionsList.innerHTML = '';
+                var queryLower = this.query.toLowerCase();
+                var queryWords = queryLower.split(' ');
                 for (var j = 0; j < this.suggestions.length; j++) {
                     var sug = this.suggestions[j];
+                    var sugLower = sug.toLowerCase();
+                    // Не показываем подсказку, если она уже содержится в запросе как слово или совпадает с последним словом
+                    if (queryWords.indexOf(sugLower) !== -1) continue;
+                    if (queryLower.slice(-sugLower.length) === sugLower) continue; // совпадает с концом строки
                     var sugSpan = BX.create('span', {
                         attrs: {
                             'class': 'mlk-search-suggestion'
@@ -184,6 +187,9 @@ $componentId = $arResult['COMPONENT_ID'];
                         }
                     });
                     this.suggestionsList.appendChild(sugSpan);
+                }
+                if (this.suggestionsList.children.length === 0) {
+                    this.suggestionsDiv.style.display = 'none';
                 }
             } else {
                 this.suggestionsDiv.style.display = 'none';
