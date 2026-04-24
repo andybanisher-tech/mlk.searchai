@@ -43,6 +43,7 @@ $componentId = $arResult['COMPONENT_ID'];
             this.timer = null;
             this.selectedIndex = -1;
             this.results = [];
+            this.lastQuery = '';
 
             this.init();
         }
@@ -91,13 +92,16 @@ $componentId = $arResult['COMPONENT_ID'];
 
         SearchAI.prototype.fetchResults = function() {
             var self = this;
+            var prev = this.lastQuery; // предыдущий успешный запрос
+            this.lastQuery = this.query; // запоминаем текущий
 
             BX.ajax({
                 url: '/ajax/search.php',
                 method: 'POST',
                 data: {
                     query: this.query,
-                    limit: this.limit
+                    limit: this.limit,
+                    prevQuery: prev
                 },
                 dataType: 'json',
                 onsuccess: function(response) {

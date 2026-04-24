@@ -61,7 +61,7 @@ class mlk_searchai extends CModule
     {
         global $DB, $DBType, $APPLICATION;
         $this->errors = $DB->RunSQLBatch(
-            $_SERVER["DOCUMENT_ROOT"] . "/local/modules/" . $this->MODULE_ID . "/install/db/" . strtolower($DBType) . "/install.sql"
+            $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/db/" . strtolower($DBType) . "/install.sql"
         );
         if ($this->errors !== false) {
             $APPLICATION->ThrowException(implode("", $this->errors));
@@ -74,7 +74,7 @@ class mlk_searchai extends CModule
     {
         global $DB, $DBType, $APPLICATION;
         $this->errors = $DB->RunSQLBatch(
-            $_SERVER["DOCUMENT_ROOT"] . "/local/modules/" . $this->MODULE_ID . "/install/db/" . strtolower($DBType) . "/uninstall.sql"
+            $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/db/" . strtolower($DBType) . "/uninstall.sql"
         );
         if ($this->errors !== false) {
             $APPLICATION->ThrowException(implode("", $this->errors));
