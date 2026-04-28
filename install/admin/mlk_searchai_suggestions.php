@@ -6,23 +6,19 @@ use Bitrix\Main\Application;
 use Bitrix\Main\Localization\Loc;
 
 Loader::includeModule('mlk.searchai');
-Loc::loadMessages(__FILE__);
+Loc::loadMessages(__FILE__); // Теперь будет искать в lang/ru/admin/ модуля
 
 $connection = Application::getConnection();
 $tableName = 'b_searchai_promoted_suggestions';
 
-// Удаление элементов
 if (check_bitrix_sessid() && isset($_REQUEST['action']) && $_REQUEST['action'] == 'delete' && isset($_REQUEST['ID'])) {
     $id = (int)$_REQUEST['ID'];
     $connection->queryExecute("DELETE FROM {$tableName} WHERE ID = {$id}");
     LocalRedirect($APPLICATION->GetCurPage() . '?lang=' . LANGUAGE_ID);
 }
 
-// Сохранение сортировки (веса) – упрощённо через отдельный запрос, но пока не делаем.
-
 $APPLICATION->SetTitle(Loc::getMessage('MLK_SEARCHAI_SUGGESTIONS_TITLE'));
 
-// Получение списка
 $listSql = "SELECT * FROM {$tableName} ORDER BY KEYWORD, WEIGHT DESC";
 $res = $connection->query($listSql);
 
