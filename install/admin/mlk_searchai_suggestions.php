@@ -6,7 +6,9 @@ use Bitrix\Main\Application;
 use Bitrix\Main\Localization\Loc;
 
 Loader::includeModule('mlk.searchai');
-Loc::loadMessages(__FILE__); // Теперь будет искать в lang/ru/admin/ модуля
+
+// Явно загружаем языковой файл из модуля
+Loc::loadMessages($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/mlk.searchai/lang/ru/admin/mlk_searchai_suggestions.php');
 
 $connection = Application::getConnection();
 $tableName = 'b_searchai_promoted_suggestions';
