@@ -116,13 +116,11 @@ class mlk_searchai extends CModule
         $sourceComponents = $modulePath . "/install/components/mlk";
         $targetComponentsBase = $docRoot . "/local/components";
 
-        // 1. Проверяем, что исходная директория компонента существует
         if (!is_dir($sourceComponents)) {
             $GLOBALS["APPLICATION"]->ThrowException("Исходная папка компонентов не найдена: " . $sourceComponents);
             return false;
         }
 
-        // 2. Создаём родительскую папку /local/components, если её нет
         if (!is_dir($targetComponentsBase)) {
             if (!mkdir($targetComponentsBase, 0755, true)) {
                 $GLOBALS["APPLICATION"]->ThrowException("Не удалось создать папку " . $targetComponentsBase);
@@ -130,11 +128,9 @@ class mlk_searchai extends CModule
             }
         }
 
-        // 3. Рекурсивно копируем mlk из source в /local/components/
         $targetComponents = $targetComponentsBase . "/mlk";
         $this->recurseCopy($sourceComponents, $targetComponents);
 
-        // 4. Админские файлы (если появятся)
         $sourceAdmin = $modulePath . "/install/admin";
         $targetAdmin = $docRoot . "/bitrix/admin";
         if (is_dir($sourceAdmin)) {
@@ -144,7 +140,6 @@ class mlk_searchai extends CModule
         return true;
     }
 
-    // Приватный метод рекурсивного копирования
     private function recurseCopy($src, $dst)
     {
         if (!is_dir($dst)) {
@@ -167,13 +162,11 @@ class mlk_searchai extends CModule
 
     function UnInstallFiles()
     {
-        // Удаляем папку компонента
         $targetComponents = $_SERVER["DOCUMENT_ROOT"] . "/local/components/mlk/search.ai";
         if (is_dir($targetComponents)) {
             Directory::deleteDirectory($targetComponents);
         }
 
-        // Удаляем админские файлы
         DeleteDirFiles(
             $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/admin",
             $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin"

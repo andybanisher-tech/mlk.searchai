@@ -18,9 +18,6 @@ class Client
         $this->apiKey   = Option::get($moduleId, 'llm_api_key', '');
         $this->model    = Option::get($moduleId, 'llm_model', 'mistral-small');
         $this->baseUrl  = Option::get($moduleId, 'llm_base_url', '');
-
-        // Логирование (можно удалить после отладки)
-        $this->log("Init: provider={$this->provider}, key=" . ($this->apiKey ? 'SET' : 'EMPTY') . ", model={$this->model}");
     }
 
     public function isAvailable(): bool
@@ -30,10 +27,7 @@ class Client
 
     public function correctQuery(string $query): string
     {
-        $this->log("correctQuery called: {$query}");
-
         if (!$this->isAvailable()) {
-            $this->log("No API key – returning original");
             return $query;
         }
 
@@ -54,7 +48,6 @@ class Client
         ]);
 
         try {
-            $this->log("Sending to {$url}");
             $ch = curl_init($url);
             curl_setopt($ch, CURLOPT_POST, true);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
@@ -64,24 +57,15 @@ class Client
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $error = curl_error($ch);
             curl_close($ch);
 
-            if ($error) {
-                $this->log("Curl error: {$error}");
-                return $query;
-            }
-            if ($httpCode !== 200) {
-                $this->log("HTTP {$httpCode}: {$response}");
+            if ($httpCode !== 200 || !$response) {
                 return $query;
             }
 
             $json = json_decode($response, true);
-            $corrected = trim($json['choices'][0]['message']['content'] ?? $query);
-            $this->log("Corrected: {$corrected}");
-            return $corrected;
+            return trim($json['choices'][0]['message']['content'] ?? $query);
         } catch (\Exception $e) {
-            $this->log("Exception: " . $e->getMessage());
             return $query;
         }
     }
@@ -91,16 +75,9 @@ class Client
         if ($this->provider === 'custom' && !empty($this->baseUrl)) {
             return rtrim($this->baseUrl, '/') . '/v1/chat/completions';
         }
-        // По умолчанию Mistral, можно добавить Groq
         if ($this->provider === 'groq') {
             return 'https://api.groq.com/openai/v1/chat/completions';
         }
         return 'https://api.mistral.ai/v1/chat/completions';
-    }
-
-    protected function log(string $message): void
-    {
-        $logFile = $_SERVER["DOCUMENT_ROOT"] . "/upload/mlk_llm_debug.log";
-        file_put_contents($logFile, date("Y-m-d H:i:s") . " {$message}\n", FILE_APPEND);
     }
 }
