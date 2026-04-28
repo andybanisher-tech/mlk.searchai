@@ -46,8 +46,9 @@ while ($row = $res->fetch()) {
     $lAdmin->AddRow($row['ID'], $row);
 }
 
+$totalCount = $connection->queryScalar("SELECT COUNT(*) FROM {$tableName}");
 $lAdmin->AddFooter([
-    ['title' => Loc::getMessage('MLK_SEARCHAI_TOTAL'), 'value' => $res->SelectedRowsCount()],
+    ['title' => Loc::getMessage('MLK_SEARCHAI_TOTAL'), 'value' => $totalCount],
 ]);
 
 $lAdmin->AddGroupActionTable([

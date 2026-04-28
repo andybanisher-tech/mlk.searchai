@@ -21,11 +21,6 @@ $tabs = [
         'DIV' => 'llm',
         'TAB' => Loc::getMessage('MLK_SEARCHAI_TAB_LLM'),
         'TITLE' => Loc::getMessage('MLK_SEARCHAI_TAB_LLM_TITLE')
-    ],
-    [
-        'DIV' => 'suggestions',
-        'TAB' => Loc::getMessage('MLK_SEARCHAI_TAB_SUGGESTIONS'),
-        'TITLE' => Loc::getMessage('MLK_SEARCHAI_TAB_SUGGESTIONS_TITLE')
     ]
 ];
 
@@ -46,9 +41,6 @@ $arAllOptions = [
         ['llm_api_key', Loc::getMessage('MLK_SEARCHAI_LLM_API_KEY'), '', ['text', 50]],
         ['llm_model', Loc::getMessage('MLK_SEARCHAI_LLM_MODEL'), 'mistral-small', ['text', 30]],
         ['llm_base_url', Loc::getMessage('MLK_SEARCHAI_LLM_BASE_URL'), '', ['text', 50]]
-    ],
-    'suggestions' => [
-        ['promoted_suggestions', Loc::getMessage('MLK_SEARCHAI_PROMOTED_SUGGESTIONS'), '', ['textarea', 10, 50]]
     ]
 ];
 
@@ -78,24 +70,24 @@ $tabControl = new CAdminTabControl('tabControl', $tabs);
             $type = $option[3];
             $value = Option::get($module_id, $name, $default);
     ?>
-    <tr>
-        <td width="40%"><?= $title ?></td>
-        <td width="60%">
-            <? if ($type[0] == 'text'): ?>
-            <input type="text" name="<?= $name ?>" value="<?= htmlspecialcharsbx($value) ?>" size="<?= $type[1] ?>">
-            <? elseif ($type[0] == 'checkbox'): ?>
-            <input type="checkbox" name="<?= $name ?>" value="Y" <?= $value == 'Y' ? 'checked' : '' ?>>
-            <? elseif ($type[0] == 'select'): ?>
-            <select name="<?= $name ?>">
-                <? foreach ($type[1] as $key => $label): ?>
-                <option value="<?= $key ?>" <?= $value == $key ? 'selected' : '' ?>><?= $label ?></option>
-                <? endforeach ?>
-            </select>
-            <? elseif ($type[0] == 'textarea'): ?>
-            <textarea name="<?= $name ?>" rows="<?= $type[1] ?>" cols="<?= $type[2] ?>"><?= htmlspecialcharsbx($value) ?></textarea>
-            <? endif ?>
-        </td>
-    </tr>
+            <tr>
+                <td width="40%"><?= $title ?></td>
+                <td width="60%">
+                    <? if ($type[0] == 'text'): ?>
+                        <input type="text" name="<?= $name ?>" value="<?= htmlspecialcharsbx($value) ?>" size="<?= $type[1] ?>">
+                    <? elseif ($type[0] == 'checkbox'): ?>
+                        <input type="checkbox" name="<?= $name ?>" value="Y" <?= $value == 'Y' ? 'checked' : '' ?>>
+                    <? elseif ($type[0] == 'select'): ?>
+                        <select name="<?= $name ?>">
+                            <? foreach ($type[1] as $key => $label): ?>
+                                <option value="<?= $key ?>" <?= $value == $key ? 'selected' : '' ?>><?= $label ?></option>
+                            <? endforeach ?>
+                        </select>
+                    <? elseif ($type[0] == 'textarea'): ?>
+                        <textarea name="<?= $name ?>" rows="<?= $type[1] ?>" cols="<?= $type[2] ?>"><?= htmlspecialcharsbx($value) ?></textarea>
+                    <? endif ?>
+                </td>
+            </tr>
     <?
         }
     }
