@@ -26,10 +26,14 @@ $tabs = [
 
 $arAllOptions = [
     'general' => [
-        ['iblock_id', Loc::getMessage('MLK_SEARCHAI_IBLOCK_ID'), '2', ['text', 10]],
-        ['search_fields', Loc::getMessage('MLK_SEARCHAI_SEARCH_FIELDS'), 'NAME,CODE,PROPERTY_ARTICLE', ['text', 50]],
-        ['results_limit', Loc::getMessage('MLK_SEARCHAI_RESULTS_LIMIT'), '5', ['text', 5]],
-        ['enable_suggestions', Loc::getMessage('MLK_SEARCHAI_ENABLE_SUGGESTIONS'), 'Y', ['checkbox']]
+    ['iblock_id', Loc::getMessage('MLK_SEARCHAI_IBLOCK_ID'), '2', ['text', 10]],
+    ['search_fields', Loc::getMessage('MLK_SEARCHAI_SEARCH_FIELDS'), 'NAME,CODE,PROPERTY_ARTICLE', ['text', 50]],
+    ['results_limit', Loc::getMessage('MLK_SEARCHAI_RESULTS_LIMIT'), '5', ['text', 5]],
+    ['enable_suggestions', Loc::getMessage('MLK_SEARCHAI_ENABLE_SUGGESTIONS'), 'Y', ['checkbox']],
+    ['filter_active', Loc::getMessage('MLK_SEARCHAI_FILTER_ACTIVE'), 'Y', ['checkbox']],
+    ['filter_available', Loc::getMessage('MLK_SEARCHAI_FILTER_AVAILABLE'), 'Y', ['checkbox']],
+    ['filter_price_not_empty', Loc::getMessage('MLK_SEARCHAI_FILTER_PRICE'), 'Y', ['checkbox']],
+    ['filter_quantity_not_zero', Loc::getMessage('MLK_SEARCHAI_FILTER_QUANTITY'), 'N', ['checkbox']],
     ],
     'llm' => [
         ['llm_enable', Loc::getMessage('MLK_SEARCHAI_LLM_ENABLE'), 'Y', ['checkbox']],

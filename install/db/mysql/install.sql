@@ -1,3 +1,4 @@
+-- Таблица статистики поисковых фраз
 CREATE TABLE IF NOT EXISTS `b_searchai_phrases` (
     `ID` int(11) NOT NULL AUTO_INCREMENT,
     `PHRASE` varchar(255) NOT NULL,
@@ -8,6 +9,7 @@ CREATE TABLE IF NOT EXISTS `b_searchai_phrases` (
     UNIQUE KEY `UX_PHRASE` (`PHRASE`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Таблица связей между словами
 CREATE TABLE IF NOT EXISTS `b_searchai_phrase_relations` (
     `ID` int(11) NOT NULL AUTO_INCREMENT,
     `PHRASE_ID` int(11) NOT NULL,
@@ -19,6 +21,7 @@ CREATE TABLE IF NOT EXISTS `b_searchai_phrase_relations` (
     KEY `IX_RELATED_PHRASE_ID` (`RELATED_PHRASE_ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Лог LLM-запросов
 CREATE TABLE IF NOT EXISTS `b_searchai_llm_log` (
     `ID` int(11) NOT NULL AUTO_INCREMENT,
     `QUERY` varchar(255) NOT NULL,
@@ -29,16 +32,7 @@ CREATE TABLE IF NOT EXISTS `b_searchai_llm_log` (
     PRIMARY KEY (`ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS `b_searchai_promoted_suggestions` (
-    `ID` int(11) NOT NULL AUTO_INCREMENT,
-    `KEYWORD` varchar(255) NOT NULL,
-    `SUGGESTION` varchar(255) NOT NULL,
-    `WEIGHT` int(11) NOT NULL DEFAULT '10',
-    `ACTIVE` char(1) NOT NULL DEFAULT 'Y',
-    PRIMARY KEY (`ID`),
-    KEY `IX_KEYWORD` (`KEYWORD`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+-- Продвигаемые подсказки
 CREATE TABLE IF NOT EXISTS `b_searchai_promoted_suggestions` (
     `ID` int(11) NOT NULL AUTO_INCREMENT,
     `KEYWORD` varchar(255) NOT NULL,

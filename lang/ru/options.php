@@ -16,3 +16,7 @@ $MESS['MLK_SEARCHAI_LLM_MODEL'] = 'Модель';
 $MESS['MLK_SEARCHAI_LLM_BASE_URL'] = 'Базовый URL (для своего сервера)';
 $MESS['MLK_SEARCHAI_PROMOTED_SUGGESTIONS'] = 'Маркетинговые подсказки (формат: слово=подсказка, по одной на строку)';
 $MESS['MLK_SEARCHAI_SAVE'] = 'Сохранить';
+$MESS['MLK_SEARCHAI_FILTER_ACTIVE'] = 'Фильтровать неактивные товары';
+$MESS['MLK_SEARCHAI_FILTER_AVAILABLE'] = 'Фильтровать товары, недоступные к покупке';
+$MESS['MLK_SEARCHAI_FILTER_PRICE'] = 'Фильтровать товары без цены';
+$MESS['MLK_SEARCHAI_FILTER_QUANTITY'] = 'Фильтровать товары с нулевым остатком';
