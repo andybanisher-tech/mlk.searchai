@@ -257,11 +257,21 @@ $componentId = $arResult['COMPONENT_ID'];
             }
         };
 
-        SearchAI.prototype.goToItem = function(item) {
-            if (item.url) {
-                window.location.href = item.url;
-            }
-        };
+       SearchAI.prototype.goToItem = function(item) {
+    if (item.url) {
+        // Отправка статистики клика
+        BX.ajax({
+            url: '/ajax/search_click.php',
+            method: 'POST',
+            data: {
+                query: this.query,
+                item_id: item.id
+            },
+            dataType: 'json'
+        });
+        window.location.href = item.url;
+    }
+};
 
         SearchAI.prototype.applySuggestion = function(suggestion) {
             this.input.value = this.query + ' ' + suggestion;

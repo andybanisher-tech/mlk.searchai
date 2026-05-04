@@ -1,5 +1,4 @@
 <?
-
 use Bitrix\Main\ModuleManager;
 use Bitrix\Main\Application;
 use Bitrix\Main\EventManager;
@@ -35,7 +34,8 @@ class mlk_searchai extends CModule
     {
         global $DOCUMENT_ROOT, $APPLICATION;
 
-        if (!ModuleManager::isModuleInstalled("iblock")) {
+        if (!ModuleManager::isModuleInstalled("iblock"))
+        {
             $APPLICATION->ThrowException(GetMessage("SEARCHAI_NEED_IBLOCK"));
             return false;
         }
@@ -44,17 +44,18 @@ class mlk_searchai extends CModule
         ModuleManager::registerModule($this->MODULE_ID);
         $this->InstallDB();
         $this->InstallEvents();
-        // Регистрируем агента очистки
-\CAgent::AddAgent(
-    '\\Mlk\\Searchai\\Agent::cleanOldData();',
-    'mlk.searchai',
-    'N', // не периодический, запускается раз в сутки
-    86400, // интервал 24 часа
-    '', // дата начала
-    'Y', // активен
-    '', // дата первого запуска
-    30 // сортировка
-);
+
+        // Агент очистки статистики (раз в сутки)
+        \CAgent::AddAgent(
+            '\\Mlk\\Searchai\\Agent::cleanOldData();',
+            'mlk.searchai',
+            'N',
+            86400,
+            '',
+            'Y',
+            '',
+            30
+        );
 
         return true;
     }
@@ -64,8 +65,8 @@ class mlk_searchai extends CModule
         $this->UnInstallDB();
         $this->UnInstallEvents();
         $this->UnInstallFiles();
-        ModuleManager::unRegisterModule($this->MODULE_ID);
         \CAgent::RemoveModuleAgents('mlk.searchai');
+        ModuleManager::unRegisterModule($this->MODULE_ID);
         return true;
     }
 
@@ -75,7 +76,8 @@ class mlk_searchai extends CModule
         $this->errors = $DB->RunSQLBatch(
             $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/db/" . strtolower($DBType) . "/install.sql"
         );
-        if ($this->errors !== false) {
+        if ($this->errors !== false)
+        {
             $APPLICATION->ThrowException(implode("", $this->errors));
             return false;
         }
@@ -88,7 +90,8 @@ class mlk_searchai extends CModule
         $this->errors = $DB->RunSQLBatch(
             $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/db/" . strtolower($DBType) . "/uninstall.sql"
         );
-        if ($this->errors !== false) {
+        if ($this->errors !== false)
+        {
             $APPLICATION->ThrowException(implode("", $this->errors));
             return false;
         }
@@ -123,59 +126,72 @@ class mlk_searchai extends CModule
 
     function InstallFiles()
     {
-        $docRoot = rtrim($_SERVER["DOCUMENT_ROOT"], '/');
-        $modulePath = $docRoot . "/bitrix/modules/" . $this->MODULE_ID;
-        $sourceComponents = $modulePath . "/install/components/mlk";
-        $targetComponentsBase = $docRoot . "/local/components";
+        $sourceComponents = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/components/mlk";
+        $targetComponents = $_SERVER["DOCUMENT_ROOT"] . "/local/components/mlk";
 
-        if (!is_dir($sourceComponents)) {
+        if (!is_dir($sourceComponents))
+        {
             $GLOBALS["APPLICATION"]->ThrowException("Исходная папка компонентов не найдена: " . $sourceComponents);
             return false;
         }
 
-        if (!is_dir($targetComponentsBase)) {
-            if (!mkdir($targetComponentsBase, 0755, true)) {
-                $GLOBALS["APPLICATION"]->ThrowException("Не удалось создать папку " . $targetComponentsBase);
-                return false;
+        $dir = Directory::createDirectory($targetComponents);
+        if (!$dir)
+        {
+            $GLOBALS["APPLICATION"]->ThrowException("Не удалось создать папку: " . $targetComponents);
+            return false;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($sourceComponents, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $item)
+        {
+            $targetPath = $targetComponents . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
+            if ($item->isDir())
+            {
+                Directory::createDirectory($targetPath);
+            }
+            else
+            {
+                $sourceFile = $item->getPathname();
+                File::copyFile($sourceFile, $targetPath);
             }
         }
 
-        $targetComponents = $targetComponentsBase . "/mlk";
-        $this->recurseCopy($sourceComponents, $targetComponents);
-
-        $sourceAdmin = $modulePath . "/install/admin";
-        $targetAdmin = $docRoot . "/bitrix/admin";
-        if (is_dir($sourceAdmin)) {
-            $this->recurseCopy($sourceAdmin, $targetAdmin);
+        $sourceAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/admin";
+        $targetAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin";
+        if (is_dir($sourceAdmin))
+        {
+            $iteratorAdmin = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($sourceAdmin, \RecursiveDirectoryIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
+            foreach ($iteratorAdmin as $item)
+            {
+                $targetPath = $targetAdmin . DIRECTORY_SEPARATOR . $iteratorAdmin->getSubPathName();
+                if ($item->isDir())
+                {
+                    Directory::createDirectory($targetPath);
+                }
+                else
+                {
+                    File::copyFile($item->getPathname(), $targetPath);
+                }
+            }
         }
 
         return true;
     }
 
-    private function recurseCopy($src, $dst)
-    {
-        if (!is_dir($dst)) {
-            mkdir($dst, 0755, true);
-        }
-        $dir = opendir($src);
-        while (false !== ($file = readdir($dir))) {
-            if (($file != '.') && ($file != '..')) {
-                $srcFile = $src . '/' . $file;
-                $dstFile = $dst . '/' . $file;
-                if (is_dir($srcFile)) {
-                    $this->recurseCopy($srcFile, $dstFile);
-                } else {
-                    copy($srcFile, $dstFile);
-                }
-            }
-        }
-        closedir($dir);
-    }
-
     function UnInstallFiles()
     {
+        // Удаляем компонент
         $targetComponents = $_SERVER["DOCUMENT_ROOT"] . "/local/components/mlk/search.ai";
-        if (is_dir($targetComponents)) {
+        if (is_dir($targetComponents))
+        {
             Directory::deleteDirectory($targetComponents);
         }
 
@@ -187,3 +203,4 @@ class mlk_searchai extends CModule
         return true;
     }
 }
+?>

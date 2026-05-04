@@ -43,3 +43,16 @@ CREATE TABLE IF NOT EXISTS `b_searchai_promoted_suggestions` (
     PRIMARY KEY (`ID`),
     KEY `IX_KEYWORD` (`KEYWORD`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Статистика кликов по результатам поиска
+CREATE TABLE IF NOT EXISTS `b_searchai_click_stats` (
+    `ID` int(11) NOT NULL AUTO_INCREMENT,
+    `SEARCH_QUERY` varchar(255) NOT NULL,
+    `ITEM_ID` int(11) NOT NULL,
+    `CLICK_COUNT` int(11) NOT NULL DEFAULT '1',
+    `LAST_CLICK_TIME` datetime NOT NULL,
+    `USER_ID` int(11) DEFAULT NULL,
+    PRIMARY KEY (`ID`),
+    UNIQUE KEY `UX_QUERY_ITEM` (`SEARCH_QUERY`, `ITEM_ID`),
+    KEY `IX_USER` (`USER_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -24,7 +24,7 @@ class Stats
     {
         $words = explode(' ', $query);
         $contextWord = end($words);
-        if (empty($contextWord) || mb_strlen($contextWord) < 4) {
+        if (empty($contextWord) || mb_strlen($contextWord) < 3) {
             return [];
         }
 
@@ -61,7 +61,7 @@ class Stats
             } elseif (!empty($row['USER_GROUPS']) && empty($userGroupIds)) {
                 $allowed = false;
             }
-            if ($allowed && !in_array($row['SUGGESTION'], $suggestions) && mb_strlen($row['SUGGESTION']) >= 4) {
+            if ($allowed && !in_array($row['SUGGESTION'], $suggestions) && mb_strlen($row['SUGGESTION']) >= 3) {
                 $suggestions[] = $row['SUGGESTION'];
                 $addedPromo++;
             }
@@ -105,14 +105,14 @@ class Stats
 
         return array_values(array_filter($suggestions, function($sug) use ($queryWordsLower, $contextWord) {
             $sugLower = mb_strtolower($sug);
-            if (mb_strlen($sug) < 4) return false;
+            if (mb_strlen($sug) < 3) return false;
             if ($sugLower === mb_strtolower($contextWord)) return false;
             if (in_array($sugLower, $queryWordsLower, true)) return false;
             return true;
         }));
     }
 
-    public static function updateRelations(string $previousQuery, string $currentQuery): void
+    public static function updateRelations(string $previousQuery, string $currentQuery, ?int $userId = null): void
     {
         $isExtension = (mb_strpos($currentQuery, $previousQuery) === 0);
         $prevWords = explode(' ', $previousQuery);
@@ -122,11 +122,10 @@ class Stats
             $prevLast = end($prevWords);
             $currFirst = reset($currWords);
             if (!empty($prevLast) && !empty($currFirst)) {
-                self::addRelation($prevLast, $currFirst);
+                self::addRelation($prevLast, $currFirst, $userId);
             }
         }
 
-        // Последовательные слова внутри текущего запроса
         $seen = [];
         for ($i = 0; $i < count($currWords); $i++) {
             $wordLower = mb_strtolower($currWords[$i]);
@@ -145,31 +144,29 @@ class Stats
                 continue;
             }
 
-            self::addRelation($wordA, $wordB);
+            self::addRelation($wordA, $wordB, $userId);
         }
     }
 
-    protected static function addRelation(string $wordA, string $wordB): void
+    protected static function addRelation(string $wordA, string $wordB, ?int $userId = null): void
     {
-        // Минимальная длина 4 символа
-        if (mb_strlen($wordA) < 4 || mb_strlen($wordB) < 4) return;
+        if (mb_strlen($wordA) < 3 || mb_strlen($wordB) < 3) return;
         if (mb_strtolower($wordA) === mb_strtolower($wordB)) return;
-
-        // Не связываем, если одно слово является началом другого
         if (mb_strpos(mb_strtolower($wordB), mb_strtolower($wordA)) === 0) return;
         if (mb_strpos(mb_strtolower($wordA), mb_strtolower($wordB)) === 0) return;
 
         $connection = Application::getConnection();
         $helper = $connection->getSqlHelper();
+        $userIdEsc = $userId ? (int)$userId : 'NULL';
 
         $idA = self::getPhraseId($wordA);
         if (!$idA) {
-            $connection->queryExecute("INSERT IGNORE INTO b_searchai_phrases (PHRASE, COUNT, LAST_SEARCH_TIME) VALUES ('" . $helper->forSql($wordA) . "', 1, NOW())");
+            $connection->queryExecute("INSERT INTO b_searchai_phrases (PHRASE, COUNT, LAST_SEARCH_TIME, USER_ID) VALUES ('" . $helper->forSql($wordA) . "', 1, NOW(), {$userIdEsc})");
             $idA = self::getPhraseId($wordA);
         }
         $idB = self::getPhraseId($wordB);
         if (!$idB) {
-            $connection->queryExecute("INSERT IGNORE INTO b_searchai_phrases (PHRASE, COUNT, LAST_SEARCH_TIME) VALUES ('" . $helper->forSql($wordB) . "', 1, NOW())");
+            $connection->queryExecute("INSERT INTO b_searchai_phrases (PHRASE, COUNT, LAST_SEARCH_TIME, USER_ID) VALUES ('" . $helper->forSql($wordB) . "', 1, NOW(), {$userIdEsc})");
             $idB = self::getPhraseId($wordB);
         }
 
