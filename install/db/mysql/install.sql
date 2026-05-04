@@ -38,3 +38,14 @@ CREATE TABLE IF NOT EXISTS `b_searchai_promoted_suggestions` (
     PRIMARY KEY (`ID`),
     KEY `IX_KEYWORD` (`KEYWORD`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `b_searchai_promoted_suggestions` (
+    `ID` int(11) NOT NULL AUTO_INCREMENT,
+    `KEYWORD` varchar(255) NOT NULL,
+    `SUGGESTION` varchar(255) NOT NULL,
+    `WEIGHT` int(11) NOT NULL DEFAULT '10',
+    `ACTIVE` char(1) NOT NULL DEFAULT 'Y',
+    `USER_GROUPS` varchar(500) DEFAULT NULL,
+    PRIMARY KEY (`ID`),
+    KEY `IX_KEYWORD` (`KEYWORD`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

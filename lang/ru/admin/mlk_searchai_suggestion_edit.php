@@ -10,3 +10,4 @@ $MESS['MLK_SEARCHAI_FIELD_KEYWORD'] = 'Ключевое слово';
 $MESS['MLK_SEARCHAI_FIELD_SUGGESTION'] = 'Подсказка';
 $MESS['MLK_SEARCHAI_FIELD_WEIGHT'] = 'Вес';
 $MESS['MLK_SEARCHAI_FIELD_ACTIVE'] = 'Активность';
+$MESS['MLK_SEARCHAI_FIELD_USER_GROUPS'] = 'Группы пользователей (пусто – всем)';
