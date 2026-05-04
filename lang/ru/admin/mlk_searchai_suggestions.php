@@ -15,3 +15,4 @@ $MESS['MLK_SEARCHAI_SUGGESTION'] = 'Подсказка';
 $MESS['MLK_SEARCHAI_WEIGHT'] = 'Вес';
 $MESS['MLK_SEARCHAI_ACTIVE'] = 'Активность';
 $MESS['MLK_SEARCHAI_USER_GROUPS'] = 'Группы';
+$MESS['MLK_SEARCHAI_EDIT'] = 'Изменить';

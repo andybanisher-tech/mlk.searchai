@@ -1,8 +1,8 @@
 <?php
-
 namespace Mlk\Searchai\Search;
 
 use Bitrix\Main\Application;
+use Bitrix\Main\Loader;
 use Bitrix\Main\UserGroupTable;
 
 class Stats
@@ -16,15 +16,14 @@ class Stats
 
         $sql = "INSERT INTO b_searchai_phrases (PHRASE, COUNT, LAST_SEARCH_TIME, USER_ID)
                 VALUES ('{$queryEsc}', 1, NOW(), {$userIdEsc})
-                ON DUPLICATE KEY UPDATE COUNT = COUNT + 1, LAST_SEARCH_TIME = NOW()";
+                ON DUPLICATE KEY UPDATE COUNT = COUNT + 1, LAST_SEARCH_TIME = NOW(), USER_ID = VALUES(USER_ID)";
         $connection->queryExecute($sql);
     }
 
     /**
-     * Возвращает подсказки для последнего слова запроса.
-     * Исключает подсказки, слова из которых уже есть в запросе.
+     * Возвращает подсказки для последнего слова запроса с учётом группы пользователя и персональной истории.
      */
-     public static function getSuggestions(string $query, ?int $userId = null): array
+    public static function getSuggestions(string $query, ?int $userId = null): array
     {
         $words = explode(' ', $query);
         $contextWord = end($words);
@@ -63,9 +62,12 @@ class Stats
                 $allowGroups = explode(',', $row['USER_GROUPS']);
                 $intersect = array_intersect($allowGroups, $userGroupIds);
                 // Если пользователь авторизован и не входит ни в одну из разрешённых групп – пропускаем
-                if (!empty($userGroupIds) && empty($intersect)) {
+                if (empty($intersect)) {
                     $allowed = false;
                 }
+            } elseif (!empty($row['USER_GROUPS']) && empty($userGroupIds)) {
+                // Если указаны группы, но пользователь не авторизован – скрываем подсказку
+                $allowed = false;
             }
             if ($allowed && !in_array($row['SUGGESTION'], $suggestions) && mb_strlen($row['SUGGESTION']) >= 3) {
                 $suggestions[] = $row['SUGGESTION'];
@@ -121,9 +123,6 @@ class Stats
         }));
     }
 
-    /**
-     * Обновляет связи между словами с учётом контекста.
-     */
     public static function updateRelations(string $previousQuery, string $currentQuery): void
     {
         $isExtension = (mb_strpos($currentQuery, $previousQuery) === 0);
@@ -138,8 +137,6 @@ class Stats
             }
         }
 
-        // Связываем последовательные слова внутри текущего запроса,
-        // но не создаём связь, если второе слово уже встречалось ранее в этом же запросе.
         $seen = [];
         for ($i = 0; $i < count($currWords); $i++) {
             $wordLower = mb_strtolower($currWords[$i]);
@@ -150,10 +147,9 @@ class Stats
 
         for ($i = 0; $i < count($currWords) - 1; $i++) {
             $wordA = $currWords[$i];
-            $wordB = $currWords[$i + 1];
+            $wordB = $currWords[$i+1];
             if (empty($wordA) || empty($wordB)) continue;
 
-            // Если слово B уже встречалось раньше (не на следующей позиции), не создаём связь
             $wordBLower = mb_strtolower($wordB);
             if (isset($seen[$wordBLower]) && $seen[$wordBLower] < $i) {
                 continue;
@@ -187,7 +183,6 @@ class Stats
             $countSql = "SELECT COUNT(*) as CNT FROM b_searchai_phrase_relations WHERE PHRASE_ID = " . (int)$idA;
             $row = $connection->query($countSql)->fetch();
             if ($row['CNT'] >= 20) {
-                // Удаляем самую слабую связь
                 $deleteSql = "DELETE FROM b_searchai_phrase_relations 
                               WHERE PHRASE_ID = " . (int)$idA . " 
                               ORDER BY WEIGHT ASC, ID ASC LIMIT 1";
