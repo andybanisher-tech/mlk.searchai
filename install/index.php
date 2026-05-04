@@ -4,8 +4,7 @@ use Bitrix\Main\Application;
 use Bitrix\Main\EventManager;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Config\Option;
-use Bitrix\Main\IO\Directory;
-use Bitrix\Main\IO\File;
+use Bitrix\Main\IO\Directory; // Оставляем для deleteDirectory, если доступен
 
 class mlk_searchai extends CModule
 {
@@ -45,7 +44,7 @@ class mlk_searchai extends CModule
         $this->InstallDB();
         $this->InstallEvents();
 
-        // Агент очистки статистики (раз в сутки)
+        // Агент очистки статистики
         \CAgent::AddAgent(
             '\\Mlk\\Searchai\\Agent::cleanOldData();',
             'mlk.searchai',
@@ -135,52 +134,15 @@ class mlk_searchai extends CModule
             return false;
         }
 
-        $dir = Directory::createDirectory($targetComponents);
-        if (!$dir)
-        {
-            $GLOBALS["APPLICATION"]->ThrowException("Не удалось создать папку: " . $targetComponents);
-            return false;
-        }
+        // Рекурсивное копирование без использования File::copyFile
+        $this->recurseCopy($sourceComponents, $targetComponents);
 
-        $iterator = new \RecursiveIteratorIterator(
-            new \RecursiveDirectoryIterator($sourceComponents, \RecursiveDirectoryIterator::SKIP_DOTS),
-            \RecursiveIteratorIterator::SELF_FIRST
-        );
-
-        foreach ($iterator as $item)
-        {
-            $targetPath = $targetComponents . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
-            if ($item->isDir())
-            {
-                Directory::createDirectory($targetPath);
-            }
-            else
-            {
-                $sourceFile = $item->getPathname();
-                File::copyFile($sourceFile, $targetPath);
-            }
-        }
-
+        // Админские файлы
         $sourceAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/admin";
         $targetAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin";
         if (is_dir($sourceAdmin))
         {
-            $iteratorAdmin = new \RecursiveIteratorIterator(
-                new \RecursiveDirectoryIterator($sourceAdmin, \RecursiveDirectoryIterator::SKIP_DOTS),
-                \RecursiveIteratorIterator::SELF_FIRST
-            );
-            foreach ($iteratorAdmin as $item)
-            {
-                $targetPath = $targetAdmin . DIRECTORY_SEPARATOR . $iteratorAdmin->getSubPathName();
-                if ($item->isDir())
-                {
-                    Directory::createDirectory($targetPath);
-                }
-                else
-                {
-                    File::copyFile($item->getPathname(), $targetPath);
-                }
-            }
+            $this->recurseCopy($sourceAdmin, $targetAdmin);
         }
 
         return true;
@@ -188,19 +150,82 @@ class mlk_searchai extends CModule
 
     function UnInstallFiles()
     {
-        // Удаляем компонент
+        // Удаляем папку компонента
         $targetComponents = $_SERVER["DOCUMENT_ROOT"] . "/local/components/mlk/search.ai";
         if (is_dir($targetComponents))
         {
-            Directory::deleteDirectory($targetComponents);
+            // Используем рекурсивное удаление
+            $this->recurseDelete($targetComponents);
         }
 
-        DeleteDirFiles(
-            $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/admin",
-            $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin"
-        );
+        // Удаляем админские файлы
+        $sourceAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/modules/" . $this->MODULE_ID . "/install/admin";
+        $targetAdmin = $_SERVER["DOCUMENT_ROOT"] . "/bitrix/admin";
+        if (is_dir($sourceAdmin))
+        {
+            $dir = opendir($sourceAdmin);
+            while (false !== ($file = readdir($dir)))
+            {
+                if ($file != '.' && $file != '..')
+                {
+                    $targetFile = $targetAdmin . '/' . $file;
+                    if (file_exists($targetFile))
+                    {
+                        unlink($targetFile);
+                    }
+                }
+            }
+            closedir($dir);
+        }
 
         return true;
+    }
+
+    // Вспомогательная функция рекурсивного копирования через plain PHP
+    private function recurseCopy($src, $dst)
+    {
+        if (!is_dir($dst))
+        {
+            mkdir($dst, 0755, true);
+        }
+        $dir = opendir($src);
+        while (false !== ($file = readdir($dir)))
+        {
+            if (($file != '.') && ($file != '..'))
+            {
+                $srcFile = $src . '/' . $file;
+                $dstFile = $dst . '/' . $file;
+                if (is_dir($srcFile))
+                {
+                    $this->recurseCopy($srcFile, $dstFile);
+                }
+                else
+                {
+                    copy($srcFile, $dstFile);
+                }
+            }
+        }
+        closedir($dir);
+    }
+
+    // Вспомогательная функция рекурсивного удаления
+    private function recurseDelete($dir)
+    {
+        if (!is_dir($dir)) return;
+        $items = array_diff(scandir($dir), ['.', '..']);
+        foreach ($items as $item)
+        {
+            $path = $dir . '/' . $item;
+            if (is_dir($path))
+            {
+                $this->recurseDelete($path);
+            }
+            else
+            {
+                unlink($path);
+            }
+        }
+        rmdir($dir);
     }
 }
 ?>
