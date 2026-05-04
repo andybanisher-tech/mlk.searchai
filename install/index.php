@@ -44,6 +44,17 @@ class mlk_searchai extends CModule
         ModuleManager::registerModule($this->MODULE_ID);
         $this->InstallDB();
         $this->InstallEvents();
+        // Регистрируем агента очистки
+\CAgent::AddAgent(
+    '\\Mlk\\Searchai\\Agent::cleanOldData();',
+    'mlk.searchai',
+    'N', // не периодический, запускается раз в сутки
+    86400, // интервал 24 часа
+    '', // дата начала
+    'Y', // активен
+    '', // дата первого запуска
+    30 // сортировка
+);
 
         return true;
     }
@@ -54,6 +65,7 @@ class mlk_searchai extends CModule
         $this->UnInstallEvents();
         $this->UnInstallFiles();
         ModuleManager::unRegisterModule($this->MODULE_ID);
+        \CAgent::RemoveModuleAgents('mlk.searchai');
         return true;
     }
 
