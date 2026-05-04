@@ -1,4 +1,5 @@
 <?php
+
 namespace Mlk\Searchai\Search;
 
 use Bitrix\Main\Application;
