@@ -1,6 +1,9 @@
 <?php if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
 
 $componentId = $arResult['COMPONENT_ID'];
+$showImages = $arResult['PARAMS']['showImages'] === 'Y';
+$imageWidth = (int)$arResult['PARAMS']['imageWidth'];
+$imageHeight = (int)$arResult['PARAMS']['imageHeight'];
 ?>
 
 <div id="<?=$componentId?>" class="mlk-search-container">
@@ -34,28 +37,31 @@ $componentId = $arResult['COMPONENT_ID'];
             this.suggestionsDiv = this.resultsDiv.querySelector('.mlk-search-suggestions');
             this.suggestionsList = this.resultsDiv.querySelector('.mlk-search-suggestions__list');
             this.emptyDiv = this.resultsDiv.querySelector('.mlk-search-empty');
-            
+
             this.minLength = config.minLength || 2;
             this.delay = config.delay || 300;
             this.limit = config.limit || 5;
-            
+            this.showImages = config.showImages !== false;
+            this.imageWidth = config.imageWidth || 40;
+            this.imageHeight = config.imageHeight || 40;
+
             this.query = '';
             this.correctedQuery = null;
             this.lastQuery = '';
             this.timer = null;
             this.selectedIndex = -1;
             this.results = [];
-            
+
             this.init();
         }
-        
+
         SearchAI.prototype.init = function() {
             var self = this;
-            
+
             this.input.addEventListener('input', function() {
                 self.onInput();
             });
-            
+
             this.input.addEventListener('keydown', function(e) {
                 if (e.key === 'ArrowDown') {
                     e.preventDefault();
@@ -68,34 +74,34 @@ $componentId = $arResult['COMPONENT_ID'];
                     self.selectCurrent();
                 }
             });
-            
+
             document.addEventListener('click', function(e) {
                 if (!self.container.contains(e.target)) {
                     self.hideResults();
                 }
             });
         };
-        
+
         SearchAI.prototype.onInput = function() {
             clearTimeout(this.timer);
             this.query = this.input.value.trim();
-            
+
             if (this.query.length < this.minLength) {
                 this.hideResults();
                 return;
             }
-            
+
             this.showLoading();
             this.resultsDiv.style.display = 'block';
-            
+
             this.timer = setTimeout(this.fetchResults.bind(this), this.delay);
         };
-        
+
         SearchAI.prototype.fetchResults = function() {
             var self = this;
             var prev = this.lastQuery;
             this.lastQuery = this.query;
-            
+
             BX.ajax({
                 url: '/ajax/search.php',
                 method: 'POST',
@@ -122,11 +128,11 @@ $componentId = $arResult['COMPONENT_ID'];
                 }
             });
         };
-        
+
         SearchAI.prototype.renderResults = function() {
             this.itemsDiv.innerHTML = '';
             this.selectedIndex = -1;
-            
+
             if (this.correctedQuery && this.correctedQuery !== this.query) {
                 this.correctedDiv.innerHTML = 'Возможно, вы имели в виду: <a href="#" class="mlk-search-corrected-link">' + BX.util.htmlspecialchars(this.correctedQuery) + '</a>';
                 this.correctedDiv.style.display = 'block';
@@ -139,46 +145,55 @@ $componentId = $arResult['COMPONENT_ID'];
             } else {
                 this.correctedDiv.style.display = 'none';
             }
-            
+
             if (this.results.length === 0) {
                 this.showEmpty();
                 return;
             }
-            
+
             this.emptyDiv.style.display = 'none';
-            
+
             for (var i = 0; i < this.results.length; i++) {
                 var item = this.results[i];
                 var itemDiv = BX.create('div', {
                     attrs: { 'class': 'mlk-search-item' },
-                    dataset: { index: i, url: item.url },
-                    html: '<div class="mlk-search-item__name">' + BX.util.htmlspecialchars(item.name) + '</div>' +
-                          (item.article ? '<div class="mlk-search-item__article">Арт. ' + BX.util.htmlspecialchars(item.article) + '</div>' : '')
+                    dataset: { index: i, url: item.url }
                 });
-                
+
+                var contentHtml = '';
+                if (this.showImages && item.image) {
+                    contentHtml += '<img src="' + BX.util.htmlspecialchars(item.image) + '" alt="" class="mlk-search-item__image" style="width:' + this.imageWidth + 'px;height:' + this.imageHeight + 'px;object-fit:cover;" />';
+                }
+                contentHtml += '<div class="mlk-search-item__info">';
+                contentHtml += '<div class="mlk-search-item__name">' + BX.util.htmlspecialchars(item.name) + '</div>';
+                if (item.article) {
+                    contentHtml += '<div class="mlk-search-item__article">Арт. ' + BX.util.htmlspecialchars(item.article) + '</div>';
+                }
+                contentHtml += '</div>';
+
+                itemDiv.innerHTML = contentHtml;
+
                 itemDiv.addEventListener('click', this.goToItem.bind(this, item));
                 itemDiv.addEventListener('mouseenter', this.setSelectedIndex.bind(this, i));
-                
+
                 this.itemsDiv.appendChild(itemDiv);
             }
-            
-            // *** ИСПРАВЛЕННЫЙ БЛОК ПОДСКАЗОК ***
+
+            // Подсказки
             if (this.suggestions && this.suggestions.length) {
                 this.suggestionsDiv.style.display = 'block';
                 this.suggestionsList.innerHTML = '';
-                // Берём исправленный запрос для отображения, если он есть
                 var displayQuery = this.correctedQuery || this.query;
                 var queryLower = displayQuery.toLowerCase();
                 var queryWords = queryLower.split(' ');
                 for (var j = 0; j < this.suggestions.length; j++) {
                     var sug = this.suggestions[j];
                     var sugLower = sug.toLowerCase();
-                    // Фильтруем подсказку, если она уже содержится в запросе
                     if (queryWords.indexOf(sugLower) !== -1) continue;
                     if (queryLower.slice(-sugLower.length) === sugLower) continue;
                     var sugSpan = BX.create('span', {
                         attrs: { 'class': 'mlk-search-suggestion' },
-                        text: displayQuery + ' ' + sug,   // <-- используем displayQuery
+                        text: displayQuery + ' ' + sug,
                         events: { click: this.applySuggestion.bind(this, sug) }
                     });
                     this.suggestionsList.appendChild(sugSpan);
@@ -190,13 +205,13 @@ $componentId = $arResult['COMPONENT_ID'];
                 this.suggestionsDiv.style.display = 'none';
             }
         };
-        
+
         SearchAI.prototype.showEmpty = function() {
             this.itemsDiv.innerHTML = '';
             this.emptyDiv.style.display = 'block';
             this.suggestionsDiv.style.display = 'none';
         };
-        
+
         SearchAI.prototype.showLoading = function() {
             this.loadingDiv.style.display = 'block';
             this.itemsDiv.style.display = 'none';
@@ -204,30 +219,30 @@ $componentId = $arResult['COMPONENT_ID'];
             this.suggestionsDiv.style.display = 'none';
             this.correctedDiv.style.display = 'none';
         };
-        
+
         SearchAI.prototype.hideLoading = function() {
             this.loadingDiv.style.display = 'none';
             this.itemsDiv.style.display = 'block';
         };
-        
+
         SearchAI.prototype.hideResults = function() {
             this.resultsDiv.style.display = 'none';
             this.query = '';
         };
-        
+
         SearchAI.prototype.moveSelection = function(delta) {
             var items = this.itemsDiv.querySelectorAll('.mlk-search-item');
             if (items.length === 0) return;
-            
+
             if (this.selectedIndex >= 0) {
                 items[this.selectedIndex].classList.remove('mlk-search-item--selected');
             }
-            
+
             this.selectedIndex = (this.selectedIndex + delta + items.length) % items.length;
             items[this.selectedIndex].classList.add('mlk-search-item--selected');
             items[this.selectedIndex].scrollIntoView({ block: 'nearest' });
         };
-        
+
         SearchAI.prototype.setSelectedIndex = function(index) {
             var items = this.itemsDiv.querySelectorAll('.mlk-search-item');
             if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
@@ -238,7 +253,7 @@ $componentId = $arResult['COMPONENT_ID'];
                 items[this.selectedIndex].classList.add('mlk-search-item--selected');
             }
         };
-        
+
         SearchAI.prototype.selectCurrent = function() {
             var items = this.itemsDiv.querySelectorAll('.mlk-search-item');
             if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
@@ -249,10 +264,9 @@ $componentId = $arResult['COMPONENT_ID'];
                 this.goToItem(firstItem);
             }
         };
-        
+
         SearchAI.prototype.goToItem = function(item) {
             if (item.url) {
-                // Отправка статистики клика
                 BX.ajax({
                     url: '/ajax/search_click.php',
                     method: 'POST',
@@ -265,23 +279,24 @@ $componentId = $arResult['COMPONENT_ID'];
                 window.location.href = item.url;
             }
         };
-        
+
         SearchAI.prototype.applySuggestion = function(suggestion) {
-            // Подставляем подсказку к исправленному запросу (если он есть)
             var baseQuery = this.correctedQuery || this.query;
             this.input.value = baseQuery + ' ' + suggestion;
             this.query = this.input.value.trim();
             this.onInput();
         };
-        
-        // Инициализация
+
         new SearchAI({
             containerId: '<?=$componentId?>',
             inputId: '<?=$componentId?>_input',
             resultsId: '<?=$componentId?>_results',
             minLength: 2,
             delay: 300,
-            limit: 5
+            limit: 5,
+            showImages: <?= $showImages ? 'true' : 'false' ?>,
+            imageWidth: <?= $imageWidth ?>,
+            imageHeight: <?= $imageHeight ?>
         });
     });
 </script>
