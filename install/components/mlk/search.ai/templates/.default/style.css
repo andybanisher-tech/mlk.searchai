@@ -179,3 +179,46 @@
     font-size: 14px;
     color: #006d75;
 }
+/* ... существующие стили ... */
+
+.mlk-ai-search-btn {
+    margin-left: 4px;
+    padding: 0 16px;
+    background: #1890ff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.mlk-ai-search-btn:hover {
+    background: #40a9ff;
+}
+
+.mlk-search-loading {
+    padding: 12px 16px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.mlk-search-loading:before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ddd;
+    border-top-color: #1890ff;
+    border-radius: 50%;
+    animation: mlk-spin 0.8s linear infinite;
+}
+@keyframes mlk-spin {
+    to { transform: rotate(360deg); }
+}
+
+.mlk-search-ai-message {
+    padding: 8px 16px;
+    background: #e6fffb;
+    border-bottom: 1px solid #b5f5ec;
+    font-size: 14px;
+    color: #006d75;
+}

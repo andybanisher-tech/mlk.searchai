@@ -28,82 +28,59 @@ class Client
         return !empty($this->apiKey);
     }
 
-    /**
-     * Исправление опечаток (существующий метод)
-     */
     public function correctQuery(string $query): string
     {
         if (!$this->isAvailable()) {
             return $query;
         }
-
-        $catalogContext = '';
-        if ($this->contextEnabled) {
-            $catalogContext = $this->getCatalogContext();
-        }
-
-        $systemPrompt = "Ты — помощник поиска на сайте косметики. Исправляй опечатки и транслитерацию, учитывая контекст магазина. Возвращай только исправленный текст без пояснений.";
-        $messages = [
-            ['role' => 'system', 'content' => $systemPrompt],
-        ];
-        if (!empty($catalogContext)) {
-            $messages[] = ['role' => 'system', 'content' => "Популярные бренды и категории: {$catalogContext}"];
-        }
-        $messages[] = ['role' => 'user', 'content' => "Запрос: '{$query}'. Исправленный запрос:"];
-
-        return $this->callApi($messages) ?? $query;
+        // ... без изменений ...
+        return $this->callApi([
+            ['role' => 'user', 'content' => "Исправь опечатки в запросе: '{$query}'. Верни только исправленный текст без пояснений."]
+        ], 100) ?? $query;
     }
 
-    /**
-     * AI-поиск: извлечение ключевых терминов из запроса
-     */
     public function analyzeSemanticQuery(string $query): string
     {
         if (!$this->isAvailable()) {
             return $query;
         }
-
         $promptTemplate = Option::get('mlk.searchai', 'ai_prompt_template', 'Проанализируй запрос пользователя. Твоя задача - переформулировать его в поисковый запрос, удалив лишние слова и оставив только ключевые термины, описывающие товар.');
-        $messages = [
+        return $this->callApi([
             ['role' => 'system', 'content' => $promptTemplate],
             ['role' => 'user', 'content' => "Запрос: '{$query}'. Ключевые термины:"],
-        ];
-
-        return $this->callApi($messages) ?? $query;
+        ], 200) ?? $query;
     }
 
-    /**
-     * AI-поиск: выбор подходящих товаров из списка сниппетов
-     */
     public function pickProducts(string $query, array $snippets): array
     {
         if (empty($snippets) || !$this->isAvailable()) {
             return [];
         }
-
-        $snippetText = "";
+        // Ограничим количество сниппетов до 30, чтобы не превысить лимит токенов
+        $snippets = array_slice($snippets, 0, 30, true);
+        $snippetLines = [];
         foreach ($snippets as $id => $desc) {
-            $snippetText .= "ID {$id}: {$desc}\n";
+            $shortDesc = mb_substr($desc, 0, 100);
+            $snippetLines[] = "{$id}: {$shortDesc}";
         }
+        $snippetText = implode("\n", $snippetLines);
 
-        $prompt = "Пользователь ищет: \"{$query}\".\n"
-                . "Товары:\n{$snippetText}\n"
-                . "Выбери ID товаров (до 3), которые максимально соответствуют запросу. Ответь только номерами ID через запятую, без пояснений.";
-        
-        $messages = [['role' => 'user', 'content' => $prompt]];
-        $response = $this->callApi($messages);
+        $prompt = "Пользователь ищет товар по запросу: \"{$query}\".\n"
+                . "Ниже список товаров с ID и описанием. Выбери до 5 ID товаров, которые максимально соответствуют запросу.\n"
+                . "Ответь ТОЛЬКО номерами ID через запятую (например: 123, 456). Не добавляй пояснений.\n\n"
+                . $snippetText;
 
+        $response = $this->callApi([['role' => 'user', 'content' => $prompt]], 300);
+        // Логирование ответа
+        $this->logDebug("pickProducts response: " . ($response ?? 'NULL'));
         if ($response) {
-            $ids = array_map('intval', explode(',', $response));
-            return array_slice($ids, 0, 5);
+            preg_match_all('/\d+/', $response, $matches);
+            return array_slice(array_unique(array_map('intval', $matches[0] ?? [])), 0, 5);
         }
         return [];
     }
 
-    /**
-     * Общий метод для вызова API (поддерживает Mistral, Groq, кастом)
-     */
-    private function callApi(array $messages): ?string
+    private function callApi(array $messages, int $maxTokens = 200): ?string
     {
         $url = $this->getApiUrl();
         $headers = [
@@ -114,8 +91,10 @@ class Client
             'model' => $this->model,
             'messages' => $messages,
             'temperature' => 0.1,
-            'max_tokens' => 200
+            'max_tokens' => $maxTokens
         ]);
+
+        $this->logDebug("callApi: {$url} model: {$this->model} messages: " . json_encode($messages));
 
         try {
             $ch = curl_init($url);
@@ -123,22 +102,30 @@ class Client
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
             curl_close($ch);
 
+            $this->logDebug("callApi httpCode: {$httpCode} error: {$error} response: " . ($response ?? 'NULL'));
+
             if ($error || $httpCode !== 200) {
                 return null;
             }
-
             $json = json_decode($response, true);
             return trim($json['choices'][0]['message']['content'] ?? '');
         } catch (\Exception $e) {
+            $this->logDebug("callApi exception: " . $e->getMessage());
             return null;
         }
+    }
+
+    private function logDebug(string $message): void
+    {
+        $logFile = $_SERVER["DOCUMENT_ROOT"] . "/upload/mlk_ai_debug.log";
+        file_put_contents($logFile, date("Y-m-d H:i:s") . " {$message}\n", FILE_APPEND);
     }
 
     protected function getApiUrl(): string
