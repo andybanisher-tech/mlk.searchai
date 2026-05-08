@@ -28,31 +28,83 @@ class Client
         return !empty($this->apiKey);
     }
 
+    /**
+     * Исправление опечаток (существующий метод)
+     */
     public function correctQuery(string $query): string
     {
         if (!$this->isAvailable()) {
             return $query;
         }
 
-        // Подготавливаем контекст каталога
         $catalogContext = '';
         if ($this->contextEnabled) {
             $catalogContext = $this->getCatalogContext();
         }
 
         $systemPrompt = "Ты — помощник поиска на сайте косметики. Исправляй опечатки и транслитерацию, учитывая контекст магазина. Возвращай только исправленный текст без пояснений.";
-
         $messages = [
             ['role' => 'system', 'content' => $systemPrompt],
         ];
-
-        // Если есть контекст, добавляем его как дополнительную информацию
         if (!empty($catalogContext)) {
             $messages[] = ['role' => 'system', 'content' => "Популярные бренды и категории: {$catalogContext}"];
         }
-
         $messages[] = ['role' => 'user', 'content' => "Запрос: '{$query}'. Исправленный запрос:"];
 
+        return $this->callApi($messages) ?? $query;
+    }
+
+    /**
+     * AI-поиск: извлечение ключевых терминов из запроса
+     */
+    public function analyzeSemanticQuery(string $query): string
+    {
+        if (!$this->isAvailable()) {
+            return $query;
+        }
+
+        $promptTemplate = Option::get('mlk.searchai', 'ai_prompt_template', 'Проанализируй запрос пользователя. Твоя задача - переформулировать его в поисковый запрос, удалив лишние слова и оставив только ключевые термины, описывающие товар.');
+        $messages = [
+            ['role' => 'system', 'content' => $promptTemplate],
+            ['role' => 'user', 'content' => "Запрос: '{$query}'. Ключевые термины:"],
+        ];
+
+        return $this->callApi($messages) ?? $query;
+    }
+
+    /**
+     * AI-поиск: выбор подходящих товаров из списка сниппетов
+     */
+    public function pickProducts(string $query, array $snippets): array
+    {
+        if (empty($snippets) || !$this->isAvailable()) {
+            return [];
+        }
+
+        $snippetText = "";
+        foreach ($snippets as $id => $desc) {
+            $snippetText .= "ID {$id}: {$desc}\n";
+        }
+
+        $prompt = "Пользователь ищет: \"{$query}\".\n"
+                . "Товары:\n{$snippetText}\n"
+                . "Выбери ID товаров (до 3), которые максимально соответствуют запросу. Ответь только номерами ID через запятую, без пояснений.";
+        
+        $messages = [['role' => 'user', 'content' => $prompt]];
+        $response = $this->callApi($messages);
+
+        if ($response) {
+            $ids = array_map('intval', explode(',', $response));
+            return array_slice($ids, 0, 5);
+        }
+        return [];
+    }
+
+    /**
+     * Общий метод для вызова API (поддерживает Mistral, Groq, кастом)
+     */
+    private function callApi(array $messages): ?string
+    {
         $url = $this->getApiUrl();
         $headers = [
             'Content-Type: application/json',
@@ -62,7 +114,7 @@ class Client
             'model' => $this->model,
             'messages' => $messages,
             'temperature' => 0.1,
-            'max_tokens' => 100
+            'max_tokens' => 200
         ]);
 
         try {
@@ -71,32 +123,35 @@ class Client
             curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 10);
 
             $response = curl_exec($ch);
             $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $error = curl_error($ch);
             curl_close($ch);
 
-            if ($error) {
-                return $query;
-            }
-            if ($httpCode !== 200) {
-                return $query;
+            if ($error || $httpCode !== 200) {
+                return null;
             }
 
             $json = json_decode($response, true);
-            $corrected = trim($json['choices'][0]['message']['content'] ?? $query);
-            return $corrected;
+            return trim($json['choices'][0]['message']['content'] ?? '');
         } catch (\Exception $e) {
-            return $query;
+            return null;
         }
     }
 
-    /**
-     * Возвращает строку с популярными названиями брендов/категорий из инфоблока.
-     * Кешируется на 24 часа.
-     */
+    protected function getApiUrl(): string
+    {
+        if ($this->provider === 'custom' && !empty($this->baseUrl)) {
+            return rtrim($this->baseUrl, '/') . '/v1/chat/completions';
+        }
+        if ($this->provider === 'groq') {
+            return 'https://api.groq.com/openai/v1/chat/completions';
+        }
+        return 'https://api.mistral.ai/v1/chat/completions';
+    }
+
     protected function getCatalogContext(): string
     {
         $cache = Cache::createInstance();
@@ -158,16 +213,5 @@ class Client
         }
 
         return '';
-    }
-
-    protected function getApiUrl(): string
-    {
-        if ($this->provider === 'custom' && !empty($this->baseUrl)) {
-            return rtrim($this->baseUrl, '/') . '/v1/chat/completions';
-        }
-        if ($this->provider === 'groq') {
-            return 'https://api.groq.com/openai/v1/chat/completions';
-        }
-        return 'https://api.mistral.ai/v1/chat/completions';
     }
 }

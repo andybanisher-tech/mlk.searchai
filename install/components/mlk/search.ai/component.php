@@ -13,6 +13,7 @@ $arResult['PARAMS'] = [
     'imageWidth' => $arParams['IMAGE_WIDTH'] ?? 40,
     'imageHeight' => $arParams['IMAGE_HEIGHT'] ?? 40,
     'searchPageUrl' => $arParams['SEARCH_PAGE_URL'] ?? '/catalog/',
+    'aiEnabled' => Option::get('mlk.searchai', 'ai_feature_enabled', 'N'),
 ];
 
 $this->IncludeComponentTemplate();

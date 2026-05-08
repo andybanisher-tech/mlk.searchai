@@ -27,6 +27,7 @@ while ($uf = $rsUserFields->fetch()) {
 // --- Свойства выбранного инфоблока ---
 $iblockId = (int)($request->getPost('iblock_id') ?? Option::get($module_id, 'iblock_id', 2));
 $productPropsList = [];
+$productFieldsList = []; // Для AI-источников
 if ($iblockId > 0 && Loader::includeModule('iblock')) {
     $rsProps = PropertyTable::getList([
         'order' => ['SORT' => 'ASC', 'NAME' => 'ASC'],
@@ -36,7 +37,18 @@ if ($iblockId > 0 && Loader::includeModule('iblock')) {
     while ($prop = $rsProps->fetch()) {
         if (!empty($prop['CODE'])) {
             $productPropsList[$prop['CODE']] = '[' . $prop['CODE'] . '] ' . $prop['NAME'];
+            $productFieldsList['PROPERTY_' . $prop['CODE']] = 'Свойство: ' . $prop['NAME'];
         }
+    }
+    // Стандартные поля элемента
+    $standardFields = [
+        'NAME' => 'Название',
+        'DETAIL_TEXT' => 'Детальное описание',
+        'PREVIEW_TEXT' => 'Анонс',
+        'TAGS' => 'Теги',
+    ];
+    foreach ($standardFields as $code => $name) {
+        $productFieldsList[$code] = 'Поле: ' . $name;
     }
 }
 
@@ -51,6 +63,11 @@ $tabs = [
         'DIV' => 'llm',
         'TAB' => Loc::getMessage('MLK_SEARCHAI_TAB_LLM'),
         'TITLE' => Loc::getMessage('MLK_SEARCHAI_TAB_LLM_TITLE')
+    ],
+    [
+        'DIV' => 'aisearch',
+        'TAB' => Loc::getMessage('MLK_SEARCHAI_TAB_AISEARCH'),
+        'TITLE' => Loc::getMessage('MLK_SEARCHAI_TAB_AISEARCH_TITLE')
     ],
 ];
 
@@ -79,11 +96,16 @@ $arAllOptions = [
         ['llm_model', Loc::getMessage('MLK_SEARCHAI_LLM_MODEL'), 'mistral-small', ['text', 30]],
         ['llm_base_url', Loc::getMessage('MLK_SEARCHAI_LLM_BASE_URL'), '', ['text', 50]]
     ],
+    'aisearch' => [
+        ['ai_feature_enabled', Loc::getMessage('MLK_SEARCHAI_AI_FEATURE_ENABLED'), 'N', ['checkbox']],
+        ['ai_source_fields', Loc::getMessage('MLK_SEARCHAI_AI_SOURCE_FIELDS'), ['NAME', 'DETAIL_TEXT'], ['multiselect', $productFieldsList]],
+        ['ai_model', Loc::getMessage('MLK_SEARCHAI_AI_MODEL'), 'mistral-large', ['text', 30]],
+        ['ai_prompt_template', Loc::getMessage('MLK_SEARCHAI_AI_PROMPT_TEMPLATE'), 'Проанализируй запрос пользователя. Твоя задача - переформулировать его в поисковый запрос, удалив лишние слова и оставив только ключевые термины, описывающие товар.', ['textarea', 5, 60]],
+    ],
 ];
 
 // Добавляем поля персонализации в общую вкладку
 $arAllOptions['general'][] = ['user_field_code', Loc::getMessage('MLK_SEARCHAI_USER_FIELD_CODE'), '', ['select', array_merge(['' => '-- не выбрано --'], $userFieldsList)]];
-// Остальные поля персонализации отрисовываются вручную
 
 // --- Сохранение ---
 if ($request->isPost() && check_bitrix_sessid()) {
@@ -91,12 +113,13 @@ if ($request->isPost() && check_bitrix_sessid()) {
         foreach ($tabOptions as $option) {
             $name = $option[0];
             $type = $option[3][0];
+            $value = $request->getPost($name);
             if ($type === 'checkbox') {
-                $value = $request->getPost($name) === 'Y' ? 'Y' : 'N';
-            } else {
-                $value = $request->getPost($name);
+                $value = $value === 'Y' ? 'Y' : 'N';
+            } elseif ($type === 'multiselect') {
+                $value = is_array($value) ? implode(',', $value) : '';
             }
-            Option::set($module_id, $name, is_array($value) ? implode(',', $value) : (string)$value);
+            Option::set($module_id, $name, $value ?? '');
         }
     }
     // Дополнительные настройки персонализации
@@ -166,7 +189,7 @@ BX.ready(function() {
             $title = $option[1];
             $default = $option[2];
             $type = $option[3];
-            $value = Option::get($module_id, $name, $default);
+            $value = Option::get($module_id, $name, is_array($default) ? implode(',', $default) : $default);
             ?>
             <tr>
                 <td width="40%"><?=$title?></td>
@@ -182,6 +205,15 @@ BX.ready(function() {
                                 <option value="<?=$key?>" <?=$value == $key ? 'selected' : ''?>><?=$label?></option>
                             <?endforeach?>
                         </select>
+                    <?elseif ($type[0] == 'multiselect'):?>
+                        <select name="<?=$name?>[]" id="<?=$name?>" multiple size="5">
+                            <?foreach ($type[1] as $key => $label):?>
+                                <?$values = explode(',', $value);?>
+                                <option value="<?=$key?>" <?=in_array($key, $values) ? 'selected' : ''?>><?=$label?></option>
+                            <?endforeach?>
+                        </select>
+                    <?elseif ($type[0] == 'textarea'):?>
+                        <textarea name="<?=$name?>" rows="<?=$type[1]?>" cols="<?=$type[2]?>"><?=htmlspecialcharsbx($value)?></textarea>
                     <?endif?>
                 </td>
             </tr>
