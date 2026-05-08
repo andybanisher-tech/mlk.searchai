@@ -4,6 +4,7 @@ $componentId = $arResult['COMPONENT_ID'];
 $showImages = $arResult['PARAMS']['showImages'] === 'Y';
 $imageWidth = (int)$arResult['PARAMS']['imageWidth'];
 $imageHeight = (int)$arResult['PARAMS']['imageHeight'];
+$searchPageUrl = $arResult['PARAMS']['searchPageUrl'];
 ?>
 
 <div id="<?=$componentId?>" class="mlk-search-container">
@@ -22,6 +23,10 @@ $imageHeight = (int)$arResult['PARAMS']['imageHeight'];
             <span class="mlk-search-suggestions__list"></span>
         </div>
         <div class="mlk-search-empty" style="display: none;">Ничего не найдено</div>
+        <!-- Блок для кнопки "Все результаты" -->
+        <div class="mlk-search-footer" id="<?=$componentId?>_footer" style="display: none;">
+            <a href="#" class="mlk-search-footer__link" id="<?=$componentId?>_all_results_link">Все результаты</a>
+        </div>
     </div>
 </div>
 
@@ -37,6 +42,8 @@ $imageHeight = (int)$arResult['PARAMS']['imageHeight'];
             this.suggestionsDiv = this.resultsDiv.querySelector('.mlk-search-suggestions');
             this.suggestionsList = this.resultsDiv.querySelector('.mlk-search-suggestions__list');
             this.emptyDiv = this.resultsDiv.querySelector('.mlk-search-empty');
+            this.footerDiv = this.resultsDiv.querySelector('.mlk-search-footer');
+            this.allResultsLink = BX(config.allResultsLinkId);
 
             this.minLength = config.minLength || 2;
             this.delay = config.delay || 300;
@@ -44,6 +51,7 @@ $imageHeight = (int)$arResult['PARAMS']['imageHeight'];
             this.showImages = config.showImages !== false;
             this.imageWidth = config.imageWidth || 40;
             this.imageHeight = config.imageHeight || 40;
+            this.searchPageUrl = config.searchPageUrl || '/catalog/';
 
             this.query = '';
             this.correctedQuery = null;
@@ -71,9 +79,29 @@ $imageHeight = (int)$arResult['PARAMS']['imageHeight'];
                     self.moveSelection(-1);
                 } else if (e.key === 'Enter') {
                     e.preventDefault();
-                    self.selectCurrent();
+                    // Если есть выделенный элемент, переходим на его страницу
+                    if (self.selectedIndex >= 0 && self.results[self.selectedIndex]) {
+                        self.goToItem(self.results[self.selectedIndex]);
+                    } else {
+                        // Иначе переходим на страницу всех результатов
+                        var query = self.correctedQuery || self.query;
+                        if (query) {
+                            window.location.href = self.searchPageUrl + (self.searchPageUrl.indexOf('?') > -1 ? '&' : '?') + 'q=' + encodeURIComponent(query);
+                        }
+                    }
                 }
             });
+
+            // Обработчик для кнопки "Все результаты"
+            if (this.allResultsLink) {
+                this.allResultsLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    var query = self.correctedQuery || self.query;
+                    if (query) {
+                        window.location.href = self.searchPageUrl + (self.searchPageUrl.indexOf('?') > -1 ? '&' : '?') + 'q=' + encodeURIComponent(query);
+                    }
+                });
+            }
 
             document.addEventListener('click', function(e) {
                 if (!self.container.contains(e.target)) {
@@ -118,11 +146,13 @@ $imageHeight = (int)$arResult['PARAMS']['imageHeight'];
                         self.correctedQuery = response.correctedQuery || null;
                         self.renderResults();
                     } else {
+                        self.footerDiv.style.display = 'none';
                         self.showEmpty();
                     }
                     self.hideLoading();
                 },
                 onfailure: function() {
+                    self.footerDiv.style.display = 'none';
                     self.showEmpty();
                     self.hideLoading();
                 }
@@ -144,6 +174,13 @@ $imageHeight = (int)$arResult['PARAMS']['imageHeight'];
                 });
             } else {
                 this.correctedDiv.style.display = 'none';
+            }
+
+            // Показываем футер с кнопкой "Все результаты"
+            if (this.query.length >= this.minLength) {
+                this.footerDiv.style.display = 'block';
+            } else {
+                this.footerDiv.style.display = 'none';
             }
 
             if (this.results.length === 0) {
@@ -179,7 +216,6 @@ $imageHeight = (int)$arResult['PARAMS']['imageHeight'];
                 this.itemsDiv.appendChild(itemDiv);
             }
 
-            // Подсказки
             if (this.suggestions && this.suggestions.length) {
                 this.suggestionsDiv.style.display = 'block';
                 this.suggestionsList.innerHTML = '';
@@ -218,6 +254,7 @@ $imageHeight = (int)$arResult['PARAMS']['imageHeight'];
             this.emptyDiv.style.display = 'none';
             this.suggestionsDiv.style.display = 'none';
             this.correctedDiv.style.display = 'none';
+            this.footerDiv.style.display = 'none';
         };
 
         SearchAI.prototype.hideLoading = function() {
@@ -291,12 +328,14 @@ $imageHeight = (int)$arResult['PARAMS']['imageHeight'];
             containerId: '<?=$componentId?>',
             inputId: '<?=$componentId?>_input',
             resultsId: '<?=$componentId?>_results',
+            allResultsLinkId: '<?=$componentId?>_all_results_link',
             minLength: 2,
             delay: 300,
             limit: 5,
             showImages: <?= $showImages ? 'true' : 'false' ?>,
             imageWidth: <?= $imageWidth ?>,
-            imageHeight: <?= $imageHeight ?>
+            imageHeight: <?= $imageHeight ?>,
+            searchPageUrl: '<?= CUtil::JSEscape($searchPageUrl) ?>'
         });
     });
 </script>

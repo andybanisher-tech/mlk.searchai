@@ -17,7 +17,7 @@ $arComponentParameters = array(
         ),
         "RESULTS_LIMIT" => array(
             "PARENT" => "BASE",
-            "NAME" => "Количество результатов",
+            "NAME" => "Количество результатов в выпадающем списке",
             "TYPE" => "STRING",
             "DEFAULT" => "5",
         ),
@@ -38,6 +38,12 @@ $arComponentParameters = array(
             "NAME" => "Высота изображения (px)",
             "TYPE" => "STRING",
             "DEFAULT" => "40",
+        ),
+        "SEARCH_PAGE_URL" => array(
+            "PARENT" => "BASE",
+            "NAME" => "URL страницы всех результатов поиска",
+            "TYPE" => "STRING",
+            "DEFAULT" => "/catalog/",
         ),
         "CACHE_TIME" => array("DEFAULT" => 3600),
     ),

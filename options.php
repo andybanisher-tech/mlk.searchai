@@ -12,7 +12,7 @@ Loader::includeModule($module_id);
 Loc::loadMessages(__FILE__);
 $request = HttpApplication::getInstance()->getContext()->getRequest();
 
-// --- Пользовательские поля пользователя (оставляем как есть) ---
+// --- Пользовательские поля пользователя ---
 $userFieldsList = [];
 $rsUserFields = UserFieldTable::getList([
     'order' => ['FIELD_NAME' => 'ASC'],
@@ -24,13 +24,23 @@ while ($uf = $rsUserFields->fetch()) {
     $userFieldsList[$fieldName] = $fieldName;
 }
 
-// --- Текущие настройки персонализации ---
-$currentIblock = (int)Option::get($module_id, 'iblock_id', 2);
-$currentEntity = Option::get($module_id, 'product_entity_type', 'SECTION');
-$currentFieldType = Option::get($module_id, 'product_field_type', 'PROPERTY'); // PROPERTY или STANDARD
-$currentFieldCode = Option::get($module_id, 'product_field_code', '');
+// --- Свойства выбранного инфоблока ---
+$iblockId = (int)($request->getPost('iblock_id') ?? Option::get($module_id, 'iblock_id', 2));
+$productPropsList = [];
+if ($iblockId > 0 && Loader::includeModule('iblock')) {
+    $rsProps = PropertyTable::getList([
+        'order' => ['SORT' => 'ASC', 'NAME' => 'ASC'],
+        'filter' => ['=IBLOCK_ID' => $iblockId],
+        'select' => ['CODE', 'NAME']
+    ]);
+    while ($prop = $rsProps->fetch()) {
+        if (!empty($prop['CODE'])) {
+            $productPropsList[$prop['CODE']] = '[' . $prop['CODE'] . '] ' . $prop['NAME'];
+        }
+    }
+}
 
-// Вкладки
+// --- Вкладки ---
 $tabs = [
     [
         'DIV' => 'general',
@@ -44,6 +54,7 @@ $tabs = [
     ],
 ];
 
+// --- Набор опций по вкладкам ---
 $arAllOptions = [
     'general' => [
         ['iblock_id', Loc::getMessage('MLK_SEARCHAI_IBLOCK_ID'), '2', ['text', 10]],
@@ -57,22 +68,27 @@ $arAllOptions = [
         ['filter_quantity_not_zero', Loc::getMessage('MLK_SEARCHAI_FILTER_QUANTITY'), 'N', ['checkbox']],
     ],
     'llm' => [
-        // ... без изменений
+        ['llm_enable', Loc::getMessage('MLK_SEARCHAI_LLM_ENABLE'), 'Y', ['checkbox']],
+        ['llm_context_enable', Loc::getMessage('MLK_SEARCHAI_LLM_CONTEXT_ENABLE'), 'Y', ['checkbox']],
+        ['llm_provider', Loc::getMessage('MLK_SEARCHAI_LLM_PROVIDER'), 'mistral', ['select', [
+            'mistral' => 'Mistral AI (бесплатно)',
+            'groq' => 'Groq (быстрый)',
+            'custom' => 'Свой сервер (OpenAI-совместимый)'
+        ]]],
+        ['llm_api_key', Loc::getMessage('MLK_SEARCHAI_LLM_API_KEY'), '', ['text', 50]],
+        ['llm_model', Loc::getMessage('MLK_SEARCHAI_LLM_MODEL'), 'mistral-small', ['text', 30]],
+        ['llm_base_url', Loc::getMessage('MLK_SEARCHAI_LLM_BASE_URL'), '', ['text', 50]]
     ],
 ];
 
-// Добавляем поля персонализации
+// Добавляем поля персонализации в общую вкладку
 $arAllOptions['general'][] = ['user_field_code', Loc::getMessage('MLK_SEARCHAI_USER_FIELD_CODE'), '', ['select', array_merge(['' => '-- не выбрано --'], $userFieldsList)]];
-// Эти поля будут отрисованы вручную ниже
+// Остальные поля персонализации отрисовываются вручную
 
-// Сохранение настроек
-if ($request->isPost() && check_bitrix_sessid())
-{
-    // Сохраняем простые опции
-    foreach ($arAllOptions as $tabOptions)
-    {
-        foreach ($tabOptions as $option)
-        {
+// --- Сохранение ---
+if ($request->isPost() && check_bitrix_sessid()) {
+    foreach ($arAllOptions as $tabOptions) {
+        foreach ($tabOptions as $option) {
             $name = $option[0];
             $type = $option[3][0];
             if ($type === 'checkbox') {
@@ -83,7 +99,7 @@ if ($request->isPost() && check_bitrix_sessid())
             Option::set($module_id, $name, is_array($value) ? implode(',', $value) : (string)$value);
         }
     }
-    // Сохраняем расширенные настройки
+    // Дополнительные настройки персонализации
     Option::set($module_id, 'product_entity_type', $request->getPost('product_entity_type') ?: 'SECTION');
     Option::set($module_id, 'product_field_type', $request->getPost('product_field_type') ?: 'PROPERTY');
     Option::set($module_id, 'product_field_code', $request->getPost('product_field_code') ?: '');
@@ -91,6 +107,7 @@ if ($request->isPost() && check_bitrix_sessid())
 
 $tabControl = new CAdminTabControl('tabControl', $tabs);
 ?>
+
 <script>
 function updateProductFieldSelect() {
     var iblockId = BX('iblock_id').value;
@@ -98,7 +115,6 @@ function updateProductFieldSelect() {
     var fieldType = BX('product_field_type').value;
     var select = BX('product_field_code');
     
-    // Очищаем список
     select.innerHTML = '<option value="">-- выберите --</option>';
     
     if (!iblockId || !entityType || !fieldType) return;
@@ -116,16 +132,13 @@ function updateProductFieldSelect() {
                     for (var code in data.standard_fields) {
                         select.options[select.options.length] = new Option(data.standard_fields[code], code);
                     }
-                } else { // PROPERTY
-                    if (data.properties && data.properties.length > 0) {
-                        data.properties.forEach(function(prop) {
-                            select.options[select.options.length] = new Option(prop.name, prop.code);
-                        });
-                    }
+                } else {
+                    data.properties.forEach(function(prop) {
+                        select.options[select.options.length] = new Option(prop.name, prop.code);
+                    });
                 }
-                // Установить сохранённое значение
-                <? if (!empty($currentFieldCode)): ?>
-                BX('product_field_code').value = '<?=CUtil::JSEscape($currentFieldCode)?>';
+                <? if (!empty(Option::get($module_id, 'product_field_code', ''))): ?>
+                BX('product_field_code').value = '<?=CUtil::JSEscape(Option::get($module_id, 'product_field_code', ''))?>';
                 <? endif; ?>
             }
         }
@@ -133,11 +146,10 @@ function updateProductFieldSelect() {
 }
 
 BX.ready(function() {
-    BX('iblock_id').addEventListener('change', updateProductFieldSelect);
-    BX('product_entity_type').addEventListener('change', updateProductFieldSelect);
-    BX('product_field_type').addEventListener('change', updateProductFieldSelect);
-    // Инициируем первоначальную загрузку, если значения уже есть
-    if (BX('iblock_id').value) {
+    if (BX('iblock_id')) {
+        BX('iblock_id').addEventListener('change', updateProductFieldSelect);
+        BX('product_entity_type').addEventListener('change', updateProductFieldSelect);
+        BX('product_field_type').addEventListener('change', updateProductFieldSelect);
         updateProductFieldSelect();
     }
 });
@@ -147,11 +159,9 @@ BX.ready(function() {
     <?=bitrix_sessid_post()?>
     <?
     $tabControl->Begin();
-    foreach ($arAllOptions as $tabName => $options)
-    {
+    foreach ($arAllOptions as $tabName => $options) {
         $tabControl->BeginNextTab();
-        foreach ($options as $option)
-        {
+        foreach ($options as $option) {
             $name = $option[0];
             $title = $option[1];
             $default = $option[2];
@@ -177,8 +187,8 @@ BX.ready(function() {
             </tr>
             <?
         }
-        // --- Вкладка general: дополнительные настройки персонализации ---
-        if ($tabName == 'general'):
+        // Блок персонализации в общей вкладке
+        if ($tabName === 'general'):
         ?>
         <tr>
             <td colspan="2"><b><?= Loc::getMessage('MLK_SEARCHAI_PERSONALIZATION_SETTINGS') ?></b></td>
@@ -187,8 +197,8 @@ BX.ready(function() {
             <td><?= Loc::getMessage('MLK_SEARCHAI_PRODUCT_ENTITY_TYPE') ?>:</td>
             <td>
                 <select name="product_entity_type" id="product_entity_type">
-                    <option value="SECTION" <?= $currentEntity == 'SECTION' ? 'selected' : '' ?>>Раздел</option>
-                    <option value="ELEMENT" <?= $currentEntity == 'ELEMENT' ? 'selected' : '' ?>>Элемент</option>
+                    <option value="SECTION" <?= Option::get($module_id, 'product_entity_type', 'SECTION') == 'SECTION' ? 'selected' : '' ?>>Раздел</option>
+                    <option value="ELEMENT" <?= Option::get($module_id, 'product_entity_type', 'SECTION') == 'ELEMENT' ? 'selected' : '' ?>>Элемент</option>
                 </select>
             </td>
         </tr>
@@ -196,8 +206,8 @@ BX.ready(function() {
             <td><?= Loc::getMessage('MLK_SEARCHAI_PRODUCT_FIELD_TYPE') ?>:</td>
             <td>
                 <select name="product_field_type" id="product_field_type">
-                    <option value="PROPERTY" <?= $currentFieldType == 'PROPERTY' ? 'selected' : '' ?>>Свойство</option>
-                    <option value="STANDARD" <?= $currentFieldType == 'STANDARD' ? 'selected' : '' ?>>Стандартное поле</option>
+                    <option value="PROPERTY" <?= Option::get($module_id, 'product_field_type', 'PROPERTY') == 'PROPERTY' ? 'selected' : '' ?>>Свойство</option>
+                    <option value="STANDARD" <?= Option::get($module_id, 'product_field_type', 'PROPERTY') == 'STANDARD' ? 'selected' : '' ?>>Стандартное поле</option>
                 </select>
             </td>
         </tr>
