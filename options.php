@@ -85,17 +85,18 @@ $arAllOptions = [
         ['filter_quantity_not_zero', Loc::getMessage('MLK_SEARCHAI_FILTER_QUANTITY'), 'N', ['checkbox']],
     ],
     'llm' => [
-        ['llm_enable', Loc::getMessage('MLK_SEARCHAI_LLM_ENABLE'), 'Y', ['checkbox']],
-        ['llm_context_enable', Loc::getMessage('MLK_SEARCHAI_LLM_CONTEXT_ENABLE'), 'Y', ['checkbox']],
-        ['llm_provider', Loc::getMessage('MLK_SEARCHAI_LLM_PROVIDER'), 'mistral', ['select', [
-            'mistral' => 'Mistral AI (бесплатно)',
-            'groq' => 'Groq (быстрый)',
-            'custom' => 'Свой сервер (OpenAI-совместимый)'
-        ]]],
-        ['llm_api_key', Loc::getMessage('MLK_SEARCHAI_LLM_API_KEY'), '', ['text', 50]],
-        ['llm_model', Loc::getMessage('MLK_SEARCHAI_LLM_MODEL'), 'mistral-small', ['text', 30]],
-        ['llm_base_url', Loc::getMessage('MLK_SEARCHAI_LLM_BASE_URL'), '', ['text', 50]]
-    ],
+    ['llm_enable', Loc::getMessage('MLK_SEARCHAI_LLM_ENABLE'), 'Y', ['checkbox']],
+    ['llm_context_enable', Loc::getMessage('MLK_SEARCHAI_LLM_CONTEXT_ENABLE'), 'Y', ['checkbox']],
+    ['llm_provider', Loc::getMessage('MLK_SEARCHAI_LLM_PROVIDER'), 'local', ['select', [
+        'local' => 'Локальный сервер (OpenAI-совместимый)',
+        'mistral' => 'Mistral AI (бесплатно)',
+        'groq' => 'Groq (быстрый)',
+        'custom' => 'Свой сервер'
+    ]]],
+    ['llm_api_key', Loc::getMessage('MLK_SEARCHAI_LLM_API_KEY'), '', ['text', 50]],
+    ['llm_model', Loc::getMessage('MLK_SEARCHAI_LLM_MODEL'), 'cotype-nano-Q4_K_M.gguf', ['text', 30]],
+    ['llm_base_url', Loc::getMessage('MLK_SEARCHAI_LLM_BASE_URL'), 'http://31.76.227.1:8000', ['text', 50]]
+],
     'aisearch' => [
         ['ai_feature_enabled', Loc::getMessage('MLK_SEARCHAI_AI_FEATURE_ENABLED'), 'N', ['checkbox']],
         ['ai_source_fields', Loc::getMessage('MLK_SEARCHAI_AI_SOURCE_FIELDS'), ['NAME', 'DETAIL_TEXT'], ['multiselect', $productFieldsList]],
