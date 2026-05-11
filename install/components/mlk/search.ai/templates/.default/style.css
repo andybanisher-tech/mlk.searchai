@@ -221,11 +221,6 @@
 }
 
 /* Виджет чата */
-.mlk-chat-widget {
-    margin-top: 10px;
-    text-align: center;
-}
-
 .mlk-chat-open-btn {
     background: #1890ff;
     color: #fff;
@@ -233,6 +228,7 @@
     padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .mlk-chat-open-btn:hover {
@@ -243,8 +239,8 @@
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 350px;
-    height: 500px;
+    width: 370px;
+    height: 550px;
     background: #fff;
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -261,6 +257,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-radius: 8px 8px 0 0;
 }
 
 .mlk-chat-close-btn {
@@ -283,7 +280,7 @@
 .mlk-chat-message {
     padding: 6px 10px;
     border-radius: 12px;
-    max-width: 80%;
+    max-width: 85%;
     word-wrap: break-word;
 }
 
@@ -296,14 +293,6 @@
 .mlk-chat-bot {
     background: #f0f0f0;
     align-self: flex-start;
-}
-
-.mlk-chat-system {
-    background: #fffbe6;
-    align-self: center;
-    font-style: italic;
-    font-size: 0.9em;
-    text-align: center;
 }
 
 .mlk-chat-input-area {
@@ -331,4 +320,64 @@
 
 .mlk-chat-input-area button:hover {
     background: #40a9ff;
+}
+
+/* Продукты и акции в чате */
+.mlk-chat-promotions,
+.mlk-chat-products {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.mlk-chat-promo,
+.mlk-chat-product {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.mlk-chat-promo-img,
+.mlk-chat-product-img {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.mlk-chat-promo-info,
+.mlk-chat-product-info {
+    flex: 1;
+}
+
+.mlk-chat-promo-info a,
+.mlk-chat-product-info a {
+    font-weight: bold;
+    color: #007bff;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.mlk-chat-promo-info a:hover,
+.mlk-chat-product-info a:hover {
+    text-decoration: underline;
+}
+
+.mlk-chat-promo-info p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #666;
+}
+
+.mlk-chat-product-info span {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #999;
 }

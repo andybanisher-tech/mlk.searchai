@@ -6,6 +6,7 @@ $imageWidth = (int)$arResult['PARAMS']['imageWidth'];
 $imageHeight = (int)$arResult['PARAMS']['imageHeight'];
 $searchPageUrl = $arResult['PARAMS']['searchPageUrl'];
 $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
+$partnerId = $arResult['PARAMS']['partnerId'] ?? '';
 ?>
 
 <div id="<?=$componentId?>" class="mlk-search-container">
@@ -20,7 +21,6 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
         <button type="button" class="mlk-ai-toggle" id="<?=$componentId?>_ai_toggle" title="AI-поиск">AI</button>
         <button type="button" class="mlk-ai-search-btn" id="<?=$componentId?>_ai_search_btn" style="display:none;">Найти</button>
         <? endif; ?>
-        <!-- Кнопка чата всегда видна -->
         <button type="button" class="mlk-chat-open-btn" id="<?=$componentId?>_chat_open_btn" style="margin-left:6px;">💬 Чат</button>
     </div>
     <div class="mlk-search-results" id="<?=$componentId?>_results" style="display: none;">
@@ -39,7 +39,6 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
             <a href="#" class="mlk-search-footer__link" id="<?=$componentId?>_all_results_link">Все результаты</a>
         </div>
     </div>
-    <!-- Модальное окно чата (независимо от результатов) -->
     <div class="mlk-chat-modal" id="<?=$componentId?>_chat_modal" style="display:none;">
         <div class="mlk-chat-header">
             <span>Чат с консультантом</span>
@@ -72,7 +71,6 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
             this.footerDiv = this.resultsDiv.querySelector('.mlk-search-footer');
             this.allResultsLink = BX(config.allResultsLinkId);
             
-            // Чат
             this.chatOpenBtn = BX(config.chatOpenBtnId) || null;
             this.chatModal = BX(config.chatModalId) || null;
             this.chatCloseBtn = BX(config.chatCloseBtnId) || null;
@@ -165,7 +163,6 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
                 });
             }
 
-            // Чат: открытие/закрытие всегда доступны
             if (this.chatOpenBtn) {
                 this.chatOpenBtn.addEventListener('click', function() {
                     self.chatModal.style.display = 'flex';
@@ -196,47 +193,48 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
             });
         };
 
-      SearchAI.prototype.sendChatMessage = function() {
-    var self = this;
-    var text = this.chatInput.value.trim();
-    if (!text) return;
-    this.addChatMessage('user', text);
-    this.chatInput.value = '';
-    
-    fetch('https://news-bot-stalker.ru/chat', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            user_id: '<?=$USER->GetID()?>',
-            message: text,
-            context: 'Поиск: ' + (this.correctedQuery || this.query),
-            partner_id: '<?=CUtil::JSEscape($USER->GetParam("UF_SELECTED_CONTRAGENT"))?>'  // <-- новое поле
-        })
-    })
-    .then(function(response) {
-        if (!response.ok) throw new Error('Network error');
-        return response.json();
-    })
-    .then(function(data) {
-        self.addChatMessage('bot', data.response || 'Ответ не получен');
-    })
-    .catch(function() {
-        self.addChatMessage('bot', 'Произошла ошибка, попробуйте позже.');
-    });
-};
+        SearchAI.prototype.sendChatMessage = function() {
+            var self = this;
+            var text = this.chatInput.value.trim();
+            if (!text) return;
+            this.addChatMessage('user', text);
+            this.chatInput.value = '';
+            
+            fetch('https://news-bot-stalker.ru/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    user_id: '<?=$USER->GetID()?>',
+                    message: text,
+                    context: 'Поиск: ' + (this.correctedQuery || this.query),
+                    partner_id: '<?=CUtil::JSEscape($partnerId)?>'
+                })
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Network error');
+                return response.json();
+            })
+            .then(function(data) {
+                self.addChatMessage('bot', data.response || 'Ответ не получен');
+            })
+            .catch(function() {
+                self.addChatMessage('bot', 'Произошла ошибка, попробуйте позже.');
+            });
+        };
 
         SearchAI.prototype.addChatMessage = function(sender, text) {
             if (!this.chatMessages) return;
             var div = BX.create('div', {
-                attrs: { 'class': 'mlk-chat-message mlk-chat-' + sender },
-                text: text
+                attrs: { 'class': 'mlk-chat-message mlk-chat-' + sender }
             });
+            if (sender === 'bot') {
+                div.innerHTML = text;
+            } else {
+                div.textContent = text;
+            }
             this.chatMessages.appendChild(div);
             this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
         };
-
-        // Остальные методы (onInput, startAiSearch, fetchResults и т.д.) без изменений
-        // ... (возьмите из предыдущей полной версии)
 
         new SearchAI({
             containerId: '<?=$componentId?>',
