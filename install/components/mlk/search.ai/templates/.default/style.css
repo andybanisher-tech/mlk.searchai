@@ -5,8 +5,13 @@
     font-family: Arial, sans-serif;
 }
 
+.mlk-search-bar {
+    display: flex;
+    align-items: stretch;
+}
+
 .mlk-search-input {
-    width: 100%;
+    flex: 1;
     padding: 12px 16px;
     font-size: 16px;
     border: 1px solid #ddd;
@@ -18,6 +23,44 @@
 .mlk-search-input:focus {
     border-color: #9ecaed;
     box-shadow: 0 0 10px rgba(158, 202, 237, 0.5);
+}
+
+.mlk-ai-toggle {
+    margin-left: 4px;
+    padding: 0 12px;
+    border: 1px solid #ddd;
+    background: #f9f9f9;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    color: #666;
+    white-space: nowrap;
+}
+
+.mlk-ai-toggle.active {
+    background: #e6f7ff;
+    border-color: #91d5ff;
+    color: #1890ff;
+}
+
+.mlk-ai-search-btn {
+    margin-left: 4px;
+    padding: 0 16px;
+    background: #1890ff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.mlk-ai-search-btn:hover {
+    background: #40a9ff;
+}
+
+.mlk-ai-input {
+    background-color: #f0faff;
+    border-color: #91d5ff;
 }
 
 .mlk-search-results {
@@ -33,6 +76,56 @@
     z-index: 1000;
     max-height: 450px;
     overflow-y: auto;
+}
+
+.mlk-search-loading {
+    padding: 12px 16px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.mlk-search-loading:before {
+    content: '';
+    width: 16px;
+    height: 16px;
+    border: 2px solid #ddd;
+    border-top-color: #1890ff;
+    border-radius: 50%;
+    animation: mlk-spin 0.8s linear infinite;
+}
+
+@keyframes mlk-spin {
+    to { transform: rotate(360deg); }
+}
+
+.mlk-search-corrected {
+    padding: 8px 16px;
+    background: #fef9e7;
+    border-bottom: 1px solid #f0e6d2;
+    font-size: 14px;
+    color: #856404;
+}
+
+.mlk-search-corrected-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+    margin-left: 4px;
+    cursor: pointer;
+}
+
+.mlk-search-corrected-link:hover {
+    text-decoration: underline;
+}
+
+.mlk-search-ai-message {
+    padding: 8px 16px;
+    background: #e6fffb;
+    border-bottom: 1px solid #b5f5ec;
+    font-size: 14px;
+    color: #006d75;
 }
 
 .mlk-search-item {
@@ -73,30 +166,9 @@
     color: #666;
 }
 
-.mlk-search-loading,
 .mlk-search-empty {
     padding: 12px 16px;
     color: #666;
-}
-
-.mlk-search-corrected {
-    padding: 8px 16px;
-    background: #fef9e7;
-    border-bottom: 1px solid #f0e6d2;
-    font-size: 14px;
-    color: #856404;
-}
-
-.mlk-search-corrected-link {
-    color: #007bff;
-    text-decoration: none;
-    font-weight: 500;
-    margin-left: 4px;
-    cursor: pointer;
-}
-
-.mlk-search-corrected-link:hover {
-    text-decoration: underline;
 }
 
 .mlk-search-suggestions {
@@ -129,7 +201,6 @@
     background: #ddd;
 }
 
-/* Стили для футера с кнопкой "Все результаты" */
 .mlk-search-footer {
     padding: 10px 16px;
     border-top: 1px solid #eee;
@@ -148,77 +219,116 @@
 .mlk-search-footer__link:hover {
     text-decoration: underline;
 }
-.mlk-search-bar {
-    display: flex;
-    align-items: stretch;
-}
-.mlk-ai-toggle {
-    margin-left: 4px;
-    padding: 0 12px;
-    border: 1px solid #ddd;
-    background: #f9f9f9;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    color: #666;
-    white-space: nowrap;
-}
-.mlk-ai-toggle.active {
-    background: #e6f7ff;
-    border-color: #91d5ff;
-    color: #1890ff;
-}
-.mlk-ai-input {
-    background-color: #f0faff;
-    border-color: #91d5ff;
-}
-.mlk-search-ai-message {
-    padding: 8px 16px;
-    background: #e6fffb;
-    border-bottom: 1px solid #b5f5ec;
-    font-size: 14px;
-    color: #006d75;
-}
-/* ... существующие стили ... */
 
-.mlk-ai-search-btn {
-    margin-left: 4px;
-    padding: 0 16px;
+/* Виджет чата */
+.mlk-chat-widget {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.mlk-chat-open-btn {
     background: #1890ff;
     color: #fff;
     border: none;
+    padding: 8px 16px;
     border-radius: 4px;
     cursor: pointer;
-    font-weight: bold;
 }
-.mlk-ai-search-btn:hover {
+
+.mlk-chat-open-btn:hover {
     background: #40a9ff;
 }
 
-.mlk-search-loading {
-    padding: 12px 16px;
-    color: #666;
+.mlk-chat-modal {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 350px;
+    height: 500px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
     display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.mlk-search-loading:before {
-    content: '';
-    width: 16px;
-    height: 16px;
-    border: 2px solid #ddd;
-    border-top-color: #1890ff;
-    border-radius: 50%;
-    animation: mlk-spin 0.8s linear infinite;
-}
-@keyframes mlk-spin {
-    to { transform: rotate(360deg); }
+    flex-direction: column;
+    z-index: 10000;
 }
 
-.mlk-search-ai-message {
-    padding: 8px 16px;
-    background: #e6fffb;
-    border-bottom: 1px solid #b5f5ec;
-    font-size: 14px;
-    color: #006d75;
+.mlk-chat-header {
+    padding: 10px;
+    background: #1890ff;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.mlk-chat-close-btn {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.mlk-chat-messages {
+    flex: 1;
+    padding: 10px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mlk-chat-message {
+    padding: 6px 10px;
+    border-radius: 12px;
+    max-width: 80%;
+    word-wrap: break-word;
+}
+
+.mlk-chat-user {
+    background: #e6f7ff;
+    align-self: flex-end;
+    text-align: right;
+}
+
+.mlk-chat-bot {
+    background: #f0f0f0;
+    align-self: flex-start;
+}
+
+.mlk-chat-system {
+    background: #fffbe6;
+    align-self: center;
+    font-style: italic;
+    font-size: 0.9em;
+    text-align: center;
+}
+
+.mlk-chat-input-area {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+}
+
+.mlk-chat-input-area input {
+    flex: 1;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 8px;
+}
+
+.mlk-chat-input-area button {
+    margin-left: 5px;
+    background: #1890ff;
+    color: #fff;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.mlk-chat-input-area button:hover {
+    background: #40a9ff;
 }

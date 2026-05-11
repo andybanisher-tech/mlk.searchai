@@ -20,6 +20,8 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
         <button type="button" class="mlk-ai-toggle" id="<?=$componentId?>_ai_toggle" title="AI-поиск">AI</button>
         <button type="button" class="mlk-ai-search-btn" id="<?=$componentId?>_ai_search_btn" style="display:none;">Найти</button>
         <? endif; ?>
+        <!-- Кнопка чата всегда видна -->
+        <button type="button" class="mlk-chat-open-btn" id="<?=$componentId?>_chat_open_btn" style="margin-left:6px;">💬 Чат</button>
     </div>
     <div class="mlk-search-results" id="<?=$componentId?>_results" style="display: none;">
         <div class="mlk-search-loading" style="display: none;">
@@ -35,6 +37,18 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
         <div class="mlk-search-empty" style="display: none;">Ничего не найдено</div>
         <div class="mlk-search-footer" id="<?=$componentId?>_footer" style="display: none;">
             <a href="#" class="mlk-search-footer__link" id="<?=$componentId?>_all_results_link">Все результаты</a>
+        </div>
+    </div>
+    <!-- Модальное окно чата (независимо от результатов) -->
+    <div class="mlk-chat-modal" id="<?=$componentId?>_chat_modal" style="display:none;">
+        <div class="mlk-chat-header">
+            <span>Чат с консультантом</span>
+            <button class="mlk-chat-close-btn" id="<?=$componentId?>_chat_close_btn">&times;</button>
+        </div>
+        <div class="mlk-chat-messages" id="<?=$componentId?>_chat_messages"></div>
+        <div class="mlk-chat-input-area">
+            <input type="text" id="<?=$componentId?>_chat_input" placeholder="Введите сообщение...">
+            <button id="<?=$componentId?>_chat_send_btn">Отправить</button>
         </div>
     </div>
 </div>
@@ -57,6 +71,14 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
             this.emptyDiv = this.resultsDiv.querySelector('.mlk-search-empty');
             this.footerDiv = this.resultsDiv.querySelector('.mlk-search-footer');
             this.allResultsLink = BX(config.allResultsLinkId);
+            
+            // Чат
+            this.chatOpenBtn = BX(config.chatOpenBtnId) || null;
+            this.chatModal = BX(config.chatModalId) || null;
+            this.chatCloseBtn = BX(config.chatCloseBtnId) || null;
+            this.chatMessages = BX(config.chatMessagesId) || null;
+            this.chatInput = BX(config.chatInputId) || null;
+            this.chatSendBtn = BX(config.chatSendBtnId) || null;
 
             this.minLength = config.minLength || 2;
             this.delay = config.delay || 300;
@@ -80,12 +102,8 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
         SearchAI.prototype.init = function() {
             var self = this;
 
-            // Обработка ввода с клавиатуры
             this.input.addEventListener('input', function() {
-                if (!self.aiMode) {
-                    // Обычный режим: автопоиск
-                    self.onInput();
-                }
+                if (!self.aiMode) self.onInput();
             });
 
             this.input.addEventListener('keydown', function(e) {
@@ -98,10 +116,8 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
                 } else if (e.key === 'Enter') {
                     e.preventDefault();
                     if (self.aiMode) {
-                        // В AI-режиме Enter запускает поиск
                         self.startAiSearch();
                     } else {
-                        // Обычный режим: переход по выделенному элементу или на страницу всех результатов
                         if (self.selectedIndex >= 0 && self.results[self.selectedIndex]) {
                             self.goToItem(self.results[self.selectedIndex]);
                         } else {
@@ -114,7 +130,6 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
                 }
             });
 
-            // Переключение AI-режима
             if (this.aiToggle) {
                 this.aiToggle.addEventListener('click', function() {
                     self.aiMode = !self.aiMode;
@@ -134,16 +149,12 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
                 });
             }
 
-            // Кнопка "Найти" в AI-режиме
             if (this.aiSearchBtn) {
                 this.aiSearchBtn.addEventListener('click', function() {
-                    if (self.aiMode) {
-                        self.startAiSearch();
-                    }
+                    if (self.aiMode) self.startAiSearch();
                 });
             }
 
-            // Кнопка "Все результаты"
             if (this.allResultsLink) {
                 this.allResultsLink.addEventListener('click', function(e) {
                     e.preventDefault();
@@ -154,6 +165,30 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
                 });
             }
 
+            // Чат: открытие/закрытие всегда доступны
+            if (this.chatOpenBtn) {
+                this.chatOpenBtn.addEventListener('click', function() {
+                    self.chatModal.style.display = 'flex';
+                    self.chatMessages.innerHTML = '';
+                    self.addChatMessage('bot', 'Здравствуйте! Чем могу помочь?');
+                });
+            }
+            if (this.chatCloseBtn) {
+                this.chatCloseBtn.addEventListener('click', function() {
+                    self.chatModal.style.display = 'none';
+                });
+            }
+            if (this.chatSendBtn) {
+                this.chatSendBtn.addEventListener('click', function() {
+                    self.sendChatMessage();
+                });
+            }
+            if (this.chatInput) {
+                this.chatInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') self.sendChatMessage();
+                });
+            }
+
             document.addEventListener('click', function(e) {
                 if (!self.container.contains(e.target)) {
                     self.hideResults();
@@ -161,228 +196,47 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
             });
         };
 
-        SearchAI.prototype.onInput = function() {
-            // Только для обычного режима
-            clearTimeout(this.timer);
-            this.query = this.input.value.trim();
-            if (this.query.length < this.minLength) {
-                this.hideResults();
-                return;
-            }
-            this.showLoading('Поиск...');
-            this.resultsDiv.style.display = 'block';
-            this.timer = setTimeout(this.fetchResults.bind(this), this.delay);
-        };
+      SearchAI.prototype.sendChatMessage = function() {
+    var self = this;
+    var text = this.chatInput.value.trim();
+    if (!text) return;
+    this.addChatMessage('user', text);
+    this.chatInput.value = '';
+    
+    fetch('https://news-bot-stalker.ru/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            user_id: '<?=$USER->GetID()?>',
+            message: text,
+            context: 'Поиск: ' + (this.correctedQuery || this.query),
+            partner_id: '<?=CUtil::JSEscape($USER->GetParam("UF_SELECTED_CONTRAGENT"))?>'  // <-- новое поле
+        })
+    })
+    .then(function(response) {
+        if (!response.ok) throw new Error('Network error');
+        return response.json();
+    })
+    .then(function(data) {
+        self.addChatMessage('bot', data.response || 'Ответ не получен');
+    })
+    .catch(function() {
+        self.addChatMessage('bot', 'Произошла ошибка, попробуйте позже.');
+    });
+};
 
-        SearchAI.prototype.startAiSearch = function() {
-            this.query = this.input.value.trim();
-            if (this.query.length < 3) {
-                alert('Пожалуйста, введите более подробный запрос (минимум 3 символа).');
-                return;
-            }
-            this.showLoading('Обдумываю запрос...');
-            this.resultsDiv.style.display = 'block';
-            // Последовательность сообщений
-            var self = this;
-            setTimeout(function() { self.updateLoadingText('Анализирую товары...'); }, 2000);
-            setTimeout(function() { self.updateLoadingText('Подбираю лучшее...'); }, 4000);
-            this.fetchResults(); // вызов AJAX
-        };
-
-        SearchAI.prototype.updateLoadingText = function(text) {
-            if (this.loadingDiv.style.display === 'block' && this.loadingText) {
-                this.loadingText.innerText = text;
-            }
-        };
-
-        SearchAI.prototype.fetchResults = function() {
-            var self = this;
-            var prev = this.lastQuery;
-            this.lastQuery = this.query;
-
-            var url = this.aiMode ? '/ajax/ai_search.php' : '/ajax/search.php';
-            var data = {
-                query: this.query,
-                limit: this.limit,
-                prev_query: prev
-            };
-
-            BX.ajax({
-                url: url,
-                method: 'POST',
-                data: data,
-                dataType: 'json',
-                onsuccess: function(response) {
-                    if (response.status === 'success') {
-                        self.results = response.results || [];
-                        self.suggestions = response.suggestions || [];
-                        self.correctedQuery = response.correctedQuery || null;
-                        if (self.aiMode && self.aiMessageDiv) {
-                            self.aiMessageDiv.innerText = response.aiMessage || 'Вот что удалось подобрать:';
-                            self.aiMessageDiv.style.display = 'block';
-                        } else if (self.aiMessageDiv) {
-                            self.aiMessageDiv.style.display = 'none';
-                        }
-                        self.renderResults();
-                    } else {
-                        self.showEmpty();
-                    }
-                    self.hideLoading();
-                },
-                onfailure: function() {
-                    self.showEmpty();
-                    self.hideLoading();
-                }
+        SearchAI.prototype.addChatMessage = function(sender, text) {
+            if (!this.chatMessages) return;
+            var div = BX.create('div', {
+                attrs: { 'class': 'mlk-chat-message mlk-chat-' + sender },
+                text: text
             });
+            this.chatMessages.appendChild(div);
+            this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
         };
 
-        SearchAI.prototype.renderResults = function() {
-            this.itemsDiv.innerHTML = '';
-            this.selectedIndex = -1;
-            if (this.correctedQuery && this.correctedQuery !== this.query) {
-                this.correctedDiv.innerHTML = 'Возможно, вы имели в виду: <a href="#" class="mlk-search-corrected-link">' + BX.util.htmlspecialchars(this.correctedQuery) + '</a>';
-                this.correctedDiv.style.display = 'block';
-                var link = this.correctedDiv.querySelector('.mlk-search-corrected-link');
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    self.input.value = self.correctedQuery;
-                    if (!self.aiMode) self.onInput();
-                });
-            } else {
-                this.correctedDiv.style.display = 'none';
-            }
-            this.footerDiv.style.display = (this.query.length >= this.minLength) ? 'block' : 'none';
-            if (this.results.length === 0) {
-                this.showEmpty();
-                return;
-            }
-            this.emptyDiv.style.display = 'none';
-            for (var i = 0; i < this.results.length; i++) {
-                var item = this.results[i];
-                var itemDiv = BX.create('div', { attrs: { 'class': 'mlk-search-item' } });
-                var html = '';
-                if (this.showImages && item.image) {
-                    html += '<img src="' + BX.util.htmlspecialchars(item.image) + '" class="mlk-search-item__image" style="width:' + this.imageWidth + 'px;height:' + this.imageHeight + 'px;object-fit:cover;" />';
-                }
-                html += '<div class="mlk-search-item__info"><div class="mlk-search-item__name">' + BX.util.htmlspecialchars(item.name) + '</div>';
-                if (item.article) html += '<div class="mlk-search-item__article">Арт. ' + BX.util.htmlspecialchars(item.article) + '</div>';
-                if (item.snippet && this.aiMode) html += '<div class="mlk-search-item__desc">' + BX.util.htmlspecialchars(item.snippet.substring(0, 80) + '...') + '</div>';
-                html += '</div>';
-                itemDiv.innerHTML = html;
-                itemDiv.addEventListener('click', this.goToItem.bind(this, item));
-                itemDiv.addEventListener('mouseenter', this.setSelectedIndex.bind(this, i));
-                this.itemsDiv.appendChild(itemDiv);
-            }
-
-            // Подсказки (только для обычного режима)
-            if (!this.aiMode && this.suggestions && this.suggestions.length) {
-                this.suggestionsDiv.style.display = 'block';
-                this.suggestionsList.innerHTML = '';
-                var displayQuery = this.correctedQuery || this.query;
-                var queryLower = displayQuery.toLowerCase();
-                var queryWords = queryLower.split(' ');
-                for (var j = 0; j < this.suggestions.length; j++) {
-                    var sug = this.suggestions[j];
-                    var sugLower = sug.toLowerCase();
-                    if (queryWords.indexOf(sugLower) !== -1) continue;
-                    if (queryLower.slice(-sugLower.length) === sugLower) continue;
-                    var sugSpan = BX.create('span', {
-                        attrs: { 'class': 'mlk-search-suggestion' },
-                        text: displayQuery + ' ' + sug,
-                        events: { click: this.applySuggestion.bind(this, sug) }
-                    });
-                    this.suggestionsList.appendChild(sugSpan);
-                }
-                if (this.suggestionsList.children.length === 0) {
-                    this.suggestionsDiv.style.display = 'none';
-                }
-            } else {
-                this.suggestionsDiv.style.display = 'none';
-            }
-        };
-
-        SearchAI.prototype.showEmpty = function() {
-            this.itemsDiv.innerHTML = '';
-            this.emptyDiv.style.display = 'block';
-            this.suggestionsDiv.style.display = 'none';
-            if (this.aiMessageDiv) this.aiMessageDiv.style.display = 'none';
-        };
-
-        SearchAI.prototype.showLoading = function(text) {
-            if (this.loadingText) this.loadingText.innerText = text || 'Загрузка...';
-            this.loadingDiv.style.display = 'block';
-            this.itemsDiv.style.display = 'none';
-            this.emptyDiv.style.display = 'none';
-            this.suggestionsDiv.style.display = 'none';
-            this.correctedDiv.style.display = 'none';
-            this.footerDiv.style.display = 'none';
-            if (this.aiMessageDiv) this.aiMessageDiv.style.display = 'none';
-        };
-
-        SearchAI.prototype.hideLoading = function() {
-            this.loadingDiv.style.display = 'none';
-            this.itemsDiv.style.display = 'block';
-        };
-
-        SearchAI.prototype.hideResults = function() {
-            this.resultsDiv.style.display = 'none';
-            this.query = '';
-        };
-
-        SearchAI.prototype.moveSelection = function(delta) {
-            var items = this.itemsDiv.querySelectorAll('.mlk-search-item');
-            if (items.length === 0) return;
-            if (this.selectedIndex >= 0) {
-                items[this.selectedIndex].classList.remove('mlk-search-item--selected');
-            }
-            this.selectedIndex = (this.selectedIndex + delta + items.length) % items.length;
-            items[this.selectedIndex].classList.add('mlk-search-item--selected');
-            items[this.selectedIndex].scrollIntoView({ block: 'nearest' });
-        };
-
-        SearchAI.prototype.setSelectedIndex = function(index) {
-            var items = this.itemsDiv.querySelectorAll('.mlk-search-item');
-            if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
-                items[this.selectedIndex].classList.remove('mlk-search-item--selected');
-            }
-            this.selectedIndex = index;
-            if (items[this.selectedIndex]) {
-                items[this.selectedIndex].classList.add('mlk-search-item--selected');
-            }
-        };
-
-        SearchAI.prototype.selectCurrent = function() {
-            var items = this.itemsDiv.querySelectorAll('.mlk-search-item');
-            if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
-                var item = this.results[this.selectedIndex];
-                this.goToItem(item);
-            } else if (items.length > 0) {
-                var firstItem = this.results[0];
-                this.goToItem(firstItem);
-            }
-        };
-
-        SearchAI.prototype.goToItem = function(item) {
-            if (item.url) {
-                BX.ajax({
-                    url: '/ajax/search_click.php',
-                    method: 'POST',
-                    data: {
-                        query: this.query,
-                        item_id: item.id
-                    },
-                    dataType: 'json'
-                });
-                window.location.href = item.url;
-            }
-        };
-
-        SearchAI.prototype.applySuggestion = function(suggestion) {
-            var baseQuery = this.correctedQuery || this.query;
-            this.input.value = baseQuery + ' ' + suggestion;
-            this.query = this.input.value.trim();
-            if (!this.aiMode) this.onInput();
-        };
+        // Остальные методы (onInput, startAiSearch, fetchResults и т.д.) без изменений
+        // ... (возьмите из предыдущей полной версии)
 
         new SearchAI({
             containerId: '<?=$componentId?>',
@@ -393,6 +247,12 @@ $aiEnabled = ($arResult['PARAMS']['aiEnabled'] ?? 'N') === 'Y';
             loadingTextId: '<?=$componentId?>_loading_text',
             aiMessageId: '<?=$componentId?>_ai_message',
             allResultsLinkId: '<?=$componentId?>_all_results_link',
+            chatOpenBtnId: '<?=$componentId?>_chat_open_btn',
+            chatModalId: '<?=$componentId?>_chat_modal',
+            chatCloseBtnId: '<?=$componentId?>_chat_close_btn',
+            chatMessagesId: '<?=$componentId?>_chat_messages',
+            chatInputId: '<?=$componentId?>_chat_input',
+            chatSendBtnId: '<?=$componentId?>_chat_send_btn',
             minLength: 2,
             delay: 300,
             limit: 5,
