@@ -7,7 +7,9 @@ use Bitrix\Main\Localization\Loc;
 
 Loader::includeModule('mlk.searchai');
 Loader::includeModule('iblock');
-Loc::loadMessages(__FILE__);
+
+// Явно подключаем языковой файл из модуля
+Loc::loadMessages($_SERVER['DOCUMENT_ROOT'] . '/bitrix/modules/mlk.searchai/lang/ru/admin/mlk_searchai_embeddings.php');
 
 $connection = Application::getConnection();
 $moduleId = 'mlk.searchai';
@@ -49,14 +51,11 @@ $indexed = $connection->queryScalar("SELECT COUNT(*) FROM b_searchai_embeddings"
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_admin_after.php");
 ?>
 
-<!-- Форма генерации эмбеддингов -->
 <form method="post" action="<?= $APPLICATION->GetCurPage() ?>?lang=<?= LANGUAGE_ID ?>">
     <?= bitrix_sessid_post() ?>
     <input type="hidden" name="generate" value="Y">
-
-    <p><?= Loc::getMessage('MLK_SEARCHAI_EMBEDDINGS_INFO', ['#TOTAL#' => $total, '#INDEXED#' => $indexed]) ?></p>
-
-    <input type="submit" value="<?= Loc::getMessage('MLK_SEARCHAI_EMBEDDINGS_START') ?>" class="adm-btn-save">
+    <p><?= GetMessage('MLK_SEARCHAI_EMBEDDINGS_INFO', ['#TOTAL#' => $total, '#INDEXED#' => $indexed]) ?></p>
+    <input type="submit" value="<?= GetMessage('MLK_SEARCHAI_EMBEDDINGS_START') ?>" class="adm-btn-save">
 </form>
 
 <?

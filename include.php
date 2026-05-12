@@ -2,15 +2,12 @@
 \Bitrix\Main\Loader::registerAutoloadClasses(
     'mlk.searchai',
     [
-        // Поскольку все классы используют стандартный PSR-4 внутри lib,
-        // можно просто зарегистрировать пространство имён.
-        // Но для гарантии перечислим основные классы.
+        \Mlk\Searchai\Search\Embedder::class => 'lib/search/embedder.php',
         \Mlk\Searchai\Llm\Client::class => 'lib/llm/client.php',
         \Mlk\Searchai\Search\Stats::class => 'lib/search/stats.php',
         \Mlk\Searchai\Search\LayoutCorrector::class => 'lib/search/layout_corrector.php',
+        \Mlk\Searchai\Search\ProductSearchHelper::class => 'lib/search/productsearchhelper.php',
+        \Mlk\Searchai\Agent::class => 'lib/agent.php',
         \Mlk\Searchai\Controller\SearchController::class => 'lib/controller/searchcontroller.php',
-         \Mlk\Searchai\Search\ProductSearchHelper::class => 'lib/search/productsearchhelper.php',
-         \Mlk\Searchai\Search\Embedder::class => 'lib/search/embedder.php',
-         
     ]
 );
