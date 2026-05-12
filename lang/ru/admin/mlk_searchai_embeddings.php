@@ -1,5 +1,8 @@
 <?
 $MESS['MLK_SEARCHAI_EMBEDDINGS_TITLE'] = 'Генерация эмбеддингов для товаров';
 $MESS['MLK_SEARCHAI_EMBEDDINGS_INFO'] = 'Всего активных товаров: #TOTAL#. Проиндексировано: #INDEXED#.';
-$MESS['MLK_SEARCHAI_EMBEDDINGS_START'] = 'Запустить генерацию';
-$MESS['MLK_SEARCHAI_EMBEDDINGS_GENERATED'] = 'Эмбеддинги сгенерированы для #COUNT# товаров.';
+$MESS['MLK_SEARCHAI_EMBEDDINGS_START_AGENT'] = 'Запустить генерацию в фоне';
+$MESS['MLK_SEARCHAI_AGENT_STARTED'] = 'Агент запущен. Эмбеддинги будут генерироваться порциями по 50 товаров. Обновляйте страницу, чтобы следить за прогрессом.';
+$MESS['MLK_SEARCHAI_AGENT_ALREADY_RUNNING'] = 'Агент уже запущен. Подождите, пока он завершит работу.';
+$MESS['MLK_SEARCHAI_AGENT_HINT'] = 'Агент будет автоматически обрабатывать по 50 товаров за раз и перезапускаться, пока не обработает все.';
+$MESS['MLK_SEARCHAI_AGENT_PROGRESS_INFO'] = 'Чтобы следить за прогрессом, обновляйте страницу. Когда проиндексированные товары совпадут с общим количеством — процесс завершён.';
