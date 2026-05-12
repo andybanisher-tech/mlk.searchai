@@ -169,6 +169,7 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
                 });
             }
 
+            // Подсказки
             if (this.chatSuggestions) {
                 var chips = this.chatSuggestions.querySelectorAll('.mlk-chat-chip');
                 chips.forEach(function(chip) {
@@ -387,76 +388,76 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
 
         SearchAI.prototype.openChat = function() {
             this.chatModal.style.display = 'flex';
+            // Всегда показываем подсказки при открытии
+            if (this.chatSuggestions) {
+                this.chatSuggestions.style.display = 'block';
+            }
+            // Приветственное сообщение только если чат пуст
             if (this.chatMessages.children.length === 0) {
                 var welcomeHtml = '<div class="mlk-chat-message mlk-chat-bot">' +
                     '<p>Здравствуйте! Я AI-консультант. Могу помочь найти товары по описанию, показать акции, баланс и ответить на вопросы.</p>' +
                     '<p>Просто напишите, что вас интересует, или выберите подсказку ниже.</p>' +
                     '</div>';
                 this.chatMessages.innerHTML = welcomeHtml;
-                if (this.chatSuggestions) this.chatSuggestions.style.display = 'block';
             }
         };
 
-       SearchAI.prototype.sendChatMessage = function() {
-    var self = this;
-    var text = this.chatInput.value.trim();
-    if (!text) return;
-    this.addChatMessage('user', text);
-    this.chatInput.value = '';
-    if (this.chatSuggestions) this.chatSuggestions.style.display = 'none';
+        SearchAI.prototype.sendChatMessage = function() {
+            var self = this;
+            var text = this.chatInput.value.trim();
+            if (!text) return;
+            this.addChatMessage('user', text);
+            this.chatInput.value = '';
+            if (this.chatSuggestions) this.chatSuggestions.style.display = 'none';
 
-    // Показываем индикатор обдумывания
-    var thinkingDiv = this.addChatMessage('bot', 'Обдумываю...');
-    
-    fetch('https://news-bot-stalker.ru/chat', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            user_id: '<?=$USER->GetID()?>',
-            message: text,
-            context: '',
-            partner_id: '<?=CUtil::JSEscape($partnerId)?>'
-        })
-    })
-    .then(function(response) {
-        if (!response.ok) throw new Error('Network error');
-        return response.json();
-    })
-    .then(function(data) {
-        // Заменяем "Обдумываю..." на реальный ответ
-        if (thinkingDiv && thinkingDiv.parentNode) {
-            thinkingDiv.innerHTML = data.response || 'Ответ не получен';
-        } else {
-            self.addChatMessage('bot', data.response || 'Ответ не получен');
-        }
-    })
-    .catch(function() {
-        if (thinkingDiv && thinkingDiv.parentNode) {
-            thinkingDiv.innerHTML = 'Произошла ошибка, попробуйте позже.';
-        } else {
-            self.addChatMessage('bot', 'Произошла ошибка, попробуйте позже.');
-        }
-    });
-};
+            // Показываем индикатор "Загрузка..."
+            var thinkingDiv = this.addChatMessage('bot', '<span class="mlk-thinking-indicator">Загрузка...</span>');
 
-// Нужно немного изменить addChatMessage, чтобы он возвращал созданный элемент
-SearchAI.prototype.addChatMessage = function(sender, text) {
-    if (!this.chatMessages) return null;
-    var div = BX.create('div', {
-        attrs: { 'class': 'mlk-chat-message mlk-chat-' + sender }
-    });
-    if (sender === 'bot') {
-        div.innerHTML = text;
-    } else {
-        div.textContent = text;
-    }
-    this.chatMessages.appendChild(div);
-    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
-    return div;
-};
+            fetch('https://news-bot-stalker.ru/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    user_id: '<?=$USER->GetID()?>',
+                    message: text,
+                    context: '',
+                    partner_id: '<?=CUtil::JSEscape($partnerId)?>'
+                })
+            })
+            .then(function(response) {
+                if (!response.ok) throw new Error('Network error');
+                return response.json();
+            })
+            .then(function(data) {
+                var resp = data.response;
+                // Проверяем, не является ли ответ JSON-командой (для совместимости)
+                try {
+                    var action = JSON.parse(resp);
+                    if (action.action === 'open_modal') {
+                        if (thinkingDiv && thinkingDiv.parentNode) {
+                            thinkingDiv.parentNode.removeChild(thinkingDiv);
+                        }
+                        self.showPromoModal(action.url, action.text);
+                        return;
+                    }
+                } catch (e) {}
+                // Заменяем "Загрузка..." на реальный ответ
+                if (thinkingDiv && thinkingDiv.parentNode) {
+                    thinkingDiv.innerHTML = resp || 'Ответ не получен';
+                } else {
+                    self.addChatMessage('bot', resp || 'Ответ не получен');
+                }
+            })
+            .catch(function() {
+                if (thinkingDiv && thinkingDiv.parentNode) {
+                    thinkingDiv.innerHTML = 'Произошла ошибка, попробуйте позже.';
+                } else {
+                    self.addChatMessage('bot', 'Произошла ошибка, попробуйте позже.');
+                }
+            });
+        };
 
         SearchAI.prototype.addChatMessage = function(sender, text) {
-            if (!this.chatMessages) return;
+            if (!this.chatMessages) return null;
             var self = this;
             var div = BX.create('div', {
                 attrs: { 'class': 'mlk-chat-message mlk-chat-' + sender }
@@ -478,6 +479,7 @@ SearchAI.prototype.addChatMessage = function(sender, text) {
             }
             this.chatMessages.appendChild(div);
             this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+            return div;
         };
 
         SearchAI.prototype.showPromoModal = function(url, titleText) {
