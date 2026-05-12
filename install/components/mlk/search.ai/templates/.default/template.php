@@ -388,11 +388,9 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
 
         SearchAI.prototype.openChat = function() {
             this.chatModal.style.display = 'flex';
-            // Всегда показываем подсказки при открытии
             if (this.chatSuggestions) {
                 this.chatSuggestions.style.display = 'block';
             }
-            // Приветственное сообщение только если чат пуст
             if (this.chatMessages.children.length === 0) {
                 var welcomeHtml = '<div class="mlk-chat-message mlk-chat-bot">' +
                     '<p>Здравствуйте! Я AI-консультант. Могу помочь найти товары по описанию, показать акции, баланс и ответить на вопросы.</p>' +
@@ -410,8 +408,7 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
             this.chatInput.value = '';
             if (this.chatSuggestions) this.chatSuggestions.style.display = 'none';
 
-            // Показываем индикатор "Загрузка..."
-            var thinkingDiv = this.addChatMessage('bot', '<span class="mlk-thinking-indicator">Загрузка...</span>');
+            var thinkingDiv = this.addChatMessage('bot', 'Загрузка...');
 
             fetch('https://news-bot-stalker.ru/chat', {
                 method: 'POST',
@@ -429,23 +426,28 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
             })
             .then(function(data) {
                 var resp = data.response;
-                // Проверяем, не является ли ответ JSON-командой (для совместимости)
-                try {
-                    var action = JSON.parse(resp);
-                    if (action.action === 'open_modal') {
-                        if (thinkingDiv && thinkingDiv.parentNode) {
-                            thinkingDiv.parentNode.removeChild(thinkingDiv);
-                        }
-                        self.showPromoModal(action.url, action.text);
-                        return;
-                    }
-                } catch (e) {}
-                // Заменяем "Загрузка..." на реальный ответ
+                console.log('Response from bot:', resp);
+                // Проверяем, не содержит ли ответ кнопку акций
+                if (resp.indexOf('mlk-chat-promo-button') > -1) {
+                    console.log('Promo button found in response, attaching handler');
+                }
+                // Заменяем "Загрузка..." на ответ
                 if (thinkingDiv && thinkingDiv.parentNode) {
                     thinkingDiv.innerHTML = resp || 'Ответ не получен';
                 } else {
                     self.addChatMessage('bot', resp || 'Ответ не получен');
                 }
+                // Навешиваем обработчик на кнопку акций, если она есть в ответе
+                var buttons = document.querySelectorAll('.mlk-chat-promo-button');
+                buttons.forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var url = this.getAttribute('data-url');
+                        console.log('Promo button clicked, URL:', url);
+                        if (url) {
+                            self.showPromoModal(url, 'Акции');
+                        }
+                    });
+                });
             })
             .catch(function() {
                 if (thinkingDiv && thinkingDiv.parentNode) {
@@ -458,22 +460,11 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
 
         SearchAI.prototype.addChatMessage = function(sender, text) {
             if (!this.chatMessages) return null;
-            var self = this;
             var div = BX.create('div', {
                 attrs: { 'class': 'mlk-chat-message mlk-chat-' + sender }
             });
             if (sender === 'bot') {
                 div.innerHTML = text;
-                // Обработчик кнопок акций (если бот вернул HTML с кнопкой)
-                var buttons = div.querySelectorAll('.mlk-chat-promo-button');
-                buttons.forEach(function(btn) {
-                    btn.addEventListener('click', function() {
-                        var url = this.getAttribute('data-url');
-                        if (url) {
-                            self.showPromoModal(url, 'Акции');
-                        }
-                    });
-                });
             } else {
                 div.textContent = text;
             }
@@ -483,9 +474,17 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
         };
 
         SearchAI.prototype.showPromoModal = function(url, titleText) {
-            document.getElementById('<?=$componentId?>_promo_iframe').src = url;
-            document.getElementById('<?=$componentId?>_promo_title').textContent = titleText || 'Акции';
-            document.getElementById('<?=$componentId?>_promo_modal').style.display = 'flex';
+            console.log('showPromoModal called with URL:', url);
+            var modal = document.getElementById('<?=$componentId?>_promo_modal');
+            var iframe = document.getElementById('<?=$componentId?>_promo_iframe');
+            var title = document.getElementById('<?=$componentId?>_promo_title');
+            if (modal && iframe) {
+                iframe.src = url;
+                if (title) title.textContent = titleText || 'Акции';
+                modal.style.display = 'flex';
+            } else {
+                console.error('Modal or iframe not found!');
+            }
         };
 
         new SearchAI({
