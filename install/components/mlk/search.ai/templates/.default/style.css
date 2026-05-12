@@ -1,3 +1,4 @@
+/* ===== Основной контейнер и строка поиска ===== */
 .mlk-search-container {
     position: relative;
     width: 100%;
@@ -25,44 +26,25 @@
     box-shadow: 0 0 10px rgba(158, 202, 237, 0.5);
 }
 
-.mlk-ai-toggle {
-    margin-left: 4px;
-    padding: 0 12px;
-    border: 1px solid #ddd;
-    background: #f9f9f9;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    color: #666;
-    white-space: nowrap;
-}
-
-.mlk-ai-toggle.active {
-    background: #e6f7ff;
-    border-color: #91d5ff;
-    color: #1890ff;
-}
-
-.mlk-ai-search-btn {
-    margin-left: 4px;
-    padding: 0 16px;
-    background: #1890ff;
+/* Кнопка AI-поиска */
+.mlk-ai-chat-btn {
+    background: linear-gradient(135deg, #1890ff, #096dd9);
     color: #fff;
     border: none;
-    border-radius: 4px;
+    padding: 8px 16px;
+    border-radius: 20px;
     cursor: pointer;
     font-weight: bold;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(24,144,255,0.3);
+    transition: opacity 0.2s;
 }
 
-.mlk-ai-search-btn:hover {
-    background: #40a9ff;
+.mlk-ai-chat-btn:hover {
+    opacity: 0.9;
 }
 
-.mlk-ai-input {
-    background-color: #f0faff;
-    border-color: #91d5ff;
-}
-
+/* ===== Выпадающий список результатов ===== */
 .mlk-search-results {
     position: absolute;
     top: 100%;
@@ -118,14 +100,6 @@
 
 .mlk-search-corrected-link:hover {
     text-decoration: underline;
-}
-
-.mlk-search-ai-message {
-    padding: 8px 16px;
-    background: #e6fffb;
-    border-bottom: 1px solid #b5f5ec;
-    font-size: 14px;
-    color: #006d75;
 }
 
 .mlk-search-item {
@@ -220,44 +194,30 @@
     text-decoration: underline;
 }
 
-/* Виджет чата */
-.mlk-chat-open-btn {
-    background: #1890ff;
-    color: #fff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-.mlk-chat-open-btn:hover {
-    background: #40a9ff;
-}
-
+/* ===== Модальное окно AI-чата ===== */
 .mlk-chat-modal {
     position: fixed;
     bottom: 20px;
     right: 20px;
-    width: 370px;
-    height: 550px;
+    width: 420px;
+    height: 600px;
     background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
     display: flex;
     flex-direction: column;
     z-index: 10000;
+    overflow: hidden;
 }
 
 .mlk-chat-header {
-    padding: 10px;
-    background: #1890ff;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #1890ff, #096dd9);
     color: #fff;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-radius: 8px 8px 0 0;
+    font-weight: bold;
 }
 
 .mlk-chat-close-btn {
@@ -278,10 +238,11 @@
 }
 
 .mlk-chat-message {
-    padding: 6px 10px;
+    padding: 8px 12px;
     border-radius: 12px;
     max-width: 85%;
     word-wrap: break-word;
+    line-height: 1.4;
 }
 
 .mlk-chat-user {
@@ -291,184 +252,149 @@
 }
 
 .mlk-chat-bot {
-    background: #f0f0f0;
+    background: #f5f5f5;
     align-self: flex-start;
 }
 
+.mlk-chat-bot p {
+    margin: 4px 0;
+}
+
+/* Подсказки в чате */
+.mlk-chat-suggestions {
+    padding: 10px 12px;
+    border-top: 1px solid #eee;
+    background: #fafafa;
+    display: block;
+}
+
+.mlk-chat-suggestions-title {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 8px;
+}
+
+.mlk-chat-suggestion-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.mlk-chat-chip {
+    background: #e6f0ff;
+    border: 1px solid #b3d1ff;
+    color: #1a73e8;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s;
+}
+
+.mlk-chat-chip:hover {
+    background: #d0e2ff;
+}
+
+/* Поле ввода в чате */
 .mlk-chat-input-area {
     display: flex;
     padding: 10px;
     border-top: 1px solid #ddd;
+    background: #fff;
 }
 
 .mlk-chat-input-area input {
     flex: 1;
     border: 1px solid #ccc;
-    border-radius: 4px;
-    padding: 8px;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    outline: none;
+}
+
+.mlk-chat-input-area input:focus {
+    border-color: #1890ff;
 }
 
 .mlk-chat-input-area button {
-    margin-left: 5px;
+    margin-left: 6px;
     background: #1890ff;
     color: #fff;
     border: none;
-    padding: 8px 12px;
-    border-radius: 4px;
+    padding: 8px 14px;
+    border-radius: 8px;
     cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
 }
 
 .mlk-chat-input-area button:hover {
     background: #40a9ff;
 }
 
-/* Продукты и акции в чате */
-.mlk-chat-promotions,
+/* Карточки товаров в чате (используются при ответе бота с HTML) */
 .mlk-chat-products {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-top: 5px;
+    gap: 8px;
+    margin-top: 8px;
 }
 
-.mlk-chat-promo,
 .mlk-chat-product {
     display: flex;
-    align-items: flex-start;
-    gap: 10px;
+    align-items: center;
+    gap: 8px;
     background: #fff;
     border-radius: 8px;
-    padding: 10px;
+    padding: 8px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.mlk-chat-promo-img,
 .mlk-chat-product-img {
-    width: 60px;
-    height: 60px;
+    width: 40px;
+    height: 40px;
     object-fit: cover;
     border-radius: 4px;
     flex-shrink: 0;
 }
 
-.mlk-chat-promo-info,
-.mlk-chat-product-info {
-    flex: 1;
-}
-
-.mlk-chat-promo-info a,
 .mlk-chat-product-info a {
-    font-weight: bold;
+    font-weight: 500;
     color: #007bff;
     text-decoration: none;
     font-size: 14px;
 }
 
-.mlk-chat-promo-info a:hover,
 .mlk-chat-product-info a:hover {
     text-decoration: underline;
 }
 
-.mlk-chat-promo-info p {
-    margin: 4px 0 0;
-    font-size: 13px;
+.mlk-chat-product-info span {
+    display: block;
+    font-size: 12px;
     color: #666;
 }
 
-.mlk-chat-product-info span {
-    display: block;
-    margin-top: 4px;
-    font-size: 12px;
-    color: #999;
-}
-
-/* Кнопка чата */
-.mlk-chat-open-btn {
-    background: linear-gradient(135deg, #1890ff, #096dd9);
-    color: #fff;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-weight: bold;
-    white-space: nowrap;
-    margin-left: 8px;
-    box-shadow: 0 2px 6px rgba(24,144,255,0.3);
-}
-.mlk-chat-open-btn:hover {
-    background: linear-gradient(135deg, #40a9ff, #1890ff);
-}
-
-/* Модальное окно для акций */
-.mlk-promo-modal {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    width: 420px;
-    height: 600px;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-    display: flex;
-    flex-direction: column;
-    z-index: 10001;
-}
-.mlk-promo-header {
-    padding: 12px 16px;
-    background: linear-gradient(135deg, #ff9c6e, #ff7a45);
-    color: #fff;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-radius: 12px 12px 0 0;
-    font-weight: bold;
-}
-.mlk-promo-close-btn {
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 20px;
-    cursor: pointer;
-}
-.mlk-promo-modal iframe {
-    flex: 1;
-}
-.mlk-chat-promo-message {
-    text-align: center;
-}
-
-.mlk-chat-promo-message p {
-    margin: 0 0 12px;
-    font-size: 15px;
-    line-height: 1.4;
-}
-
+/* Кнопка акций (если бот возвращает) */
 .mlk-chat-promo-button {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 12px 24px;
-    background: linear-gradient(135deg, #ff7a45, #ff9c6e);
+    display: inline-block;
+    margin-top: 8px;
+    padding: 8px 16px;
+    background: #ff7a45;
     color: #fff;
-    border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     cursor: pointer;
-    font-weight: 600;
-    font-size: 15px;
-    letter-spacing: 0.3px;
-    box-shadow: 0 4px 12px rgba(255, 122, 69, 0.3);
-    transition: all 0.2s ease;
+    font-weight: bold;
+    text-align: center;
+    transition: background 0.2s;
 }
 
 .mlk-chat-promo-button:hover {
-    background: linear-gradient(135deg, #ff9c6e, #ffb38b);
-    box-shadow: 0 6px 16px rgba(255, 122, 69, 0.4);
-    transform: translateY(-1px);
+    background: #ff9c6e;
 }
 
-.mlk-chat-promo-button:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(255, 122, 69, 0.3);
+/* Вспомогательные анимации */
+@keyframes mlk-spin {
+    to { transform: rotate(360deg); }
 }
