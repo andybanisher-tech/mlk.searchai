@@ -11,5 +11,6 @@
         \Mlk\Searchai\Controller\SearchController::class => 'lib/controller/searchcontroller.php',
          \Mlk\Searchai\Search\ProductSearchHelper::class => 'lib/search/productsearchhelper.php',
          \Mlk\Searchai\Search\Embedder::class => 'lib/search/embedder.php',
+         
     ]
 );
