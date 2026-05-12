@@ -21,7 +21,7 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
         <button type="button" class="mlk-ai-toggle" id="<?=$componentId?>_ai_toggle" title="AI-поиск">AI</button>
         <button type="button" class="mlk-ai-search-btn" id="<?=$componentId?>_ai_search_btn" style="display:none;">Найти</button>
         <? endif; ?>
-        <button type="button" class="mlk-chat-open-btn" id="<?=$componentId?>_chat_open_btn" style="margin-left:6px;">💬 Чат</button>
+        <button type="button" class="mlk-chat-open-btn" id="<?=$componentId?>_chat_open_btn">💬 Консультант</button>
     </div>
     <div class="mlk-search-results" id="<?=$componentId?>_results" style="display: none;">
         <div class="mlk-search-loading" style="display: none;">
@@ -39,6 +39,8 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
             <a href="#" class="mlk-search-footer__link" id="<?=$componentId?>_all_results_link">Все результаты</a>
         </div>
     </div>
+
+    <!-- Модальное окно чата -->
     <div class="mlk-chat-modal" id="<?=$componentId?>_chat_modal" style="display:none;">
         <div class="mlk-chat-header">
             <span>Чат с консультантом</span>
@@ -49,6 +51,15 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
             <input type="text" id="<?=$componentId?>_chat_input" placeholder="Введите сообщение...">
             <button id="<?=$componentId?>_chat_send_btn">Отправить</button>
         </div>
+    </div>
+
+    <!-- Модальное окно для акций (iframe) -->
+    <div class="mlk-promo-modal" id="<?=$componentId?>_promo_modal" style="display:none;">
+        <div class="mlk-promo-header">
+            <span id="<?=$componentId?>_promo_title">Акции</span>
+            <button class="mlk-promo-close-btn" id="<?=$componentId?>_promo_close_btn">&times;</button>
+        </div>
+        <iframe id="<?=$componentId?>_promo_iframe" src="" frameborder="0" style="width:100%; height:100%; border:none;"></iframe>
     </div>
 </div>
 
@@ -186,11 +197,240 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
                 });
             }
 
+            // Закрытие модального окна акций
+            var promoCloseBtn = document.getElementById('<?=$componentId?>_promo_close_btn');
+            if (promoCloseBtn) {
+                promoCloseBtn.addEventListener('click', function() {
+                    document.getElementById('<?=$componentId?>_promo_modal').style.display = 'none';
+                    document.getElementById('<?=$componentId?>_promo_iframe').src = '';
+                });
+            }
+
             document.addEventListener('click', function(e) {
                 if (!self.container.contains(e.target)) {
                     self.hideResults();
                 }
             });
+        };
+
+        SearchAI.prototype.onInput = function() {
+            clearTimeout(this.timer);
+            this.query = this.input.value.trim();
+            if (this.query.length < this.minLength) {
+                this.hideResults();
+                return;
+            }
+            this.showLoading('Поиск...');
+            this.resultsDiv.style.display = 'block';
+            this.timer = setTimeout(this.fetchResults.bind(this), this.delay);
+        };
+
+        SearchAI.prototype.startAiSearch = function() {
+            this.query = this.input.value.trim();
+            if (this.query.length < 3) {
+                alert('Пожалуйста, введите более подробный запрос (минимум 3 символа).');
+                return;
+            }
+            this.showLoading('Обдумываю запрос...');
+            this.resultsDiv.style.display = 'block';
+            var self = this;
+            setTimeout(function() { self.updateLoadingText('Анализирую товары...'); }, 2000);
+            setTimeout(function() { self.updateLoadingText('Подбираю лучшее...'); }, 4000);
+            this.fetchResults();
+        };
+
+        SearchAI.prototype.updateLoadingText = function(text) {
+            if (this.loadingDiv.style.display === 'block' && this.loadingText) {
+                this.loadingText.innerText = text;
+            }
+        };
+
+        SearchAI.prototype.fetchResults = function() {
+            var self = this;
+            var prev = this.lastQuery;
+            this.lastQuery = this.query;
+
+            var url = this.aiMode ? '/ajax/ai_search.php' : '/ajax/search.php';
+            var data = {
+                query: this.query,
+                limit: this.limit,
+                prev_query: prev
+            };
+
+            BX.ajax({
+                url: url,
+                method: 'POST',
+                data: data,
+                dataType: 'json',
+                onsuccess: function(response) {
+                    if (response.status === 'success') {
+                        self.results = response.results || [];
+                        self.suggestions = response.suggestions || [];
+                        self.correctedQuery = response.correctedQuery || null;
+                        if (self.aiMode && self.aiMessageDiv) {
+                            self.aiMessageDiv.innerText = response.aiMessage || '';
+                            self.aiMessageDiv.style.display = 'block';
+                        } else if (self.aiMessageDiv) {
+                            self.aiMessageDiv.style.display = 'none';
+                        }
+                        self.renderResults();
+                    } else {
+                        self.showEmpty();
+                    }
+                    self.hideLoading();
+                },
+                onfailure: function() {
+                    self.showEmpty();
+                    self.hideLoading();
+                }
+            });
+        };
+
+        SearchAI.prototype.renderResults = function() {
+            this.itemsDiv.innerHTML = '';
+            this.selectedIndex = -1;
+            if (this.correctedQuery && this.correctedQuery !== this.query) {
+                this.correctedDiv.innerHTML = 'Возможно, вы имели в виду: <a href="#" class="mlk-search-corrected-link">' + BX.util.htmlspecialchars(this.correctedQuery) + '</a>';
+                this.correctedDiv.style.display = 'block';
+                var link = this.correctedDiv.querySelector('.mlk-search-corrected-link');
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    self.input.value = self.correctedQuery;
+                    if (!self.aiMode) self.onInput();
+                });
+            } else {
+                this.correctedDiv.style.display = 'none';
+            }
+            this.footerDiv.style.display = (this.query.length >= this.minLength) ? 'block' : 'none';
+            if (this.results.length === 0) {
+                this.showEmpty();
+                return;
+            }
+            this.emptyDiv.style.display = 'none';
+            for (var i = 0; i < this.results.length; i++) {
+                var item = this.results[i];
+                var itemDiv = BX.create('div', { attrs: { 'class': 'mlk-search-item' } });
+                var html = '';
+                if (this.showImages && item.image) {
+                    html += '<img src="' + BX.util.htmlspecialchars(item.image) + '" class="mlk-search-item__image" style="width:' + this.imageWidth + 'px;height:' + this.imageHeight + 'px;object-fit:cover;" />';
+                }
+                html += '<div class="mlk-search-item__info"><div class="mlk-search-item__name">' + BX.util.htmlspecialchars(item.name) + '</div>';
+                if (item.article) html += '<div class="mlk-search-item__article">Арт. ' + BX.util.htmlspecialchars(item.article) + '</div>';
+                if (item.snippet && this.aiMode) html += '<div class="mlk-search-item__desc">' + BX.util.htmlspecialchars(item.snippet.substring(0, 80) + '...') + '</div>';
+                html += '</div>';
+                itemDiv.innerHTML = html;
+                itemDiv.addEventListener('click', this.goToItem.bind(this, item));
+                itemDiv.addEventListener('mouseenter', this.setSelectedIndex.bind(this, i));
+                this.itemsDiv.appendChild(itemDiv);
+            }
+
+            if (!this.aiMode && this.suggestions && this.suggestions.length) {
+                this.suggestionsDiv.style.display = 'block';
+                this.suggestionsList.innerHTML = '';
+                var displayQuery = this.correctedQuery || this.query;
+                var queryLower = displayQuery.toLowerCase();
+                var queryWords = queryLower.split(' ');
+                for (var j = 0; j < this.suggestions.length; j++) {
+                    var sug = this.suggestions[j];
+                    var sugLower = sug.toLowerCase();
+                    if (queryWords.indexOf(sugLower) !== -1) continue;
+                    if (queryLower.slice(-sugLower.length) === sugLower) continue;
+                    var sugSpan = BX.create('span', {
+                        attrs: { 'class': 'mlk-search-suggestion' },
+                        text: displayQuery + ' ' + sug,
+                        events: { click: this.applySuggestion.bind(this, sug) }
+                    });
+                    this.suggestionsList.appendChild(sugSpan);
+                }
+                if (this.suggestionsList.children.length === 0) {
+                    this.suggestionsDiv.style.display = 'none';
+                }
+            } else {
+                this.suggestionsDiv.style.display = 'none';
+            }
+        };
+
+        SearchAI.prototype.showEmpty = function() {
+            this.itemsDiv.innerHTML = '';
+            this.emptyDiv.style.display = 'block';
+            this.suggestionsDiv.style.display = 'none';
+            if (this.aiMessageDiv) this.aiMessageDiv.style.display = 'none';
+        };
+
+        SearchAI.prototype.showLoading = function(text) {
+            if (this.loadingText) this.loadingText.innerText = text || 'Загрузка...';
+            this.loadingDiv.style.display = 'block';
+            this.itemsDiv.style.display = 'none';
+            this.emptyDiv.style.display = 'none';
+            this.suggestionsDiv.style.display = 'none';
+            this.correctedDiv.style.display = 'none';
+            this.footerDiv.style.display = 'none';
+            if (this.aiMessageDiv) this.aiMessageDiv.style.display = 'none';
+        };
+
+        SearchAI.prototype.hideLoading = function() {
+            this.loadingDiv.style.display = 'none';
+            this.itemsDiv.style.display = 'block';
+        };
+
+        SearchAI.prototype.hideResults = function() {
+            this.resultsDiv.style.display = 'none';
+            this.query = '';
+        };
+
+        SearchAI.prototype.moveSelection = function(delta) {
+            var items = this.itemsDiv.querySelectorAll('.mlk-search-item');
+            if (items.length === 0) return;
+            if (this.selectedIndex >= 0) {
+                items[this.selectedIndex].classList.remove('mlk-search-item--selected');
+            }
+            this.selectedIndex = (this.selectedIndex + delta + items.length) % items.length;
+            items[this.selectedIndex].classList.add('mlk-search-item--selected');
+            items[this.selectedIndex].scrollIntoView({ block: 'nearest' });
+        };
+
+        SearchAI.prototype.setSelectedIndex = function(index) {
+            var items = this.itemsDiv.querySelectorAll('.mlk-search-item');
+            if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
+                items[this.selectedIndex].classList.remove('mlk-search-item--selected');
+            }
+            this.selectedIndex = index;
+            if (items[this.selectedIndex]) {
+                items[this.selectedIndex].classList.add('mlk-search-item--selected');
+            }
+        };
+
+        SearchAI.prototype.selectCurrent = function() {
+            var items = this.itemsDiv.querySelectorAll('.mlk-search-item');
+            if (this.selectedIndex >= 0 && items[this.selectedIndex]) {
+                var item = this.results[this.selectedIndex];
+                this.goToItem(item);
+            } else if (items.length > 0) {
+                var firstItem = this.results[0];
+                this.goToItem(firstItem);
+            }
+        };
+
+        SearchAI.prototype.goToItem = function(item) {
+            if (item.url) {
+                BX.ajax({
+                    url: '/ajax/search_click.php',
+                    method: 'POST',
+                    data: {
+                        query: this.query,
+                        item_id: item.id
+                    },
+                    dataType: 'json'
+                });
+                window.location.href = item.url;
+            }
+        };
+
+        SearchAI.prototype.applySuggestion = function(suggestion) {
+            var baseQuery = this.correctedQuery || this.query;
+            this.input.value = baseQuery + ' ' + suggestion;
+            this.query = this.input.value.trim();
+            if (!this.aiMode) this.onInput();
         };
 
         SearchAI.prototype.sendChatMessage = function() {
@@ -215,25 +455,47 @@ $partnerId = $arResult['PARAMS']['partnerId'] ?? '';
                 return response.json();
             })
             .then(function(data) {
-                self.addChatMessage('bot', data.response || 'Ответ не получен');
+                var resp = data.response;
+                try {
+                    var action = JSON.parse(resp);
+                    if (action.action === 'open_modal') {
+                        self.showPromoModal(action.url, action.text);
+                        return;
+                    }
+                } catch (e) {}
+                self.addChatMessage('bot', resp);
             })
             .catch(function() {
                 self.addChatMessage('bot', 'Произошла ошибка, попробуйте позже.');
             });
         };
-
-        SearchAI.prototype.addChatMessage = function(sender, text) {
-            if (!this.chatMessages) return;
-            var div = BX.create('div', {
-                attrs: { 'class': 'mlk-chat-message mlk-chat-' + sender }
+SearchAI.prototype.addChatMessage = function(sender, text) {
+    if (!this.chatMessages) return;
+    var self = this;  // <-- сохраняем контекст для обработчика
+    var div = BX.create('div', {
+        attrs: { 'class': 'mlk-chat-message mlk-chat-' + sender }
+    });
+    if (sender === 'bot') {
+        div.innerHTML = text;
+        // Навешиваем обработчики на кнопки акций
+        var buttons = div.querySelectorAll('.mlk-chat-promo-button');
+        buttons.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var url = this.getAttribute('data-url');
+                if (url) self.showPromoModal(url, 'Акции');
             });
-            if (sender === 'bot') {
-                div.innerHTML = text;
-            } else {
-                div.textContent = text;
-            }
-            this.chatMessages.appendChild(div);
-            this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+        });
+    } else {
+        div.textContent = text;
+    }
+    this.chatMessages.appendChild(div);
+    this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+};
+
+        SearchAI.prototype.showPromoModal = function(url, titleText) {
+            document.getElementById('<?=$componentId?>_promo_iframe').src = url;
+            document.getElementById('<?=$componentId?>_promo_title').textContent = titleText || 'Акции';
+            document.getElementById('<?=$componentId?>_promo_modal').style.display = 'flex';
         };
 
         new SearchAI({

@@ -22,6 +22,10 @@ $menu = [
             "text" => Loc::getMessage("MLK_SEARCHAI_MENU_ITEM_SUGGESTIONS"),
             "url" => "mlk_searchai_suggestions.php?lang=" . LANGUAGE_ID,
         ],
+        [
+            "text" => Loc::getMessage("MLK_SEARCHAI_MENU_GENERATE_EMBEDDINGS"),
+             "url" => "mlk_searchai_generate_embeddings.php?lang=" . LANGUAGE_ID,
+        ],
     ],
 ];
 

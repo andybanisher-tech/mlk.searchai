@@ -56,3 +56,10 @@ CREATE TABLE IF NOT EXISTS `b_searchai_click_stats` (
     UNIQUE KEY `UX_QUERY_ITEM` (`SEARCH_QUERY`, `ITEM_ID`),
     KEY `IX_USER` (`USER_ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `b_searchai_embeddings` (
+    `ITEM_ID` int(11) NOT NULL,
+    `EMBEDDING` LONGTEXT NOT NULL,
+    `UPDATED_AT` datetime NOT NULL,
+    PRIMARY KEY (`ITEM_ID`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
