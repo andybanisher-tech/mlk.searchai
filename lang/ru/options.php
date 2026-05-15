@@ -31,3 +31,4 @@ $MESS['MLK_SEARCHAI_AI_FEATURE_ENABLED'] = 'Включить AI-поиск';
 $MESS['MLK_SEARCHAI_AI_SOURCE_FIELDS'] = 'Поля и свойства для анализа товаров';
 $MESS['MLK_SEARCHAI_AI_MODEL'] = 'Модель LLM для AI-поиска';
 $MESS['MLK_SEARCHAI_AI_PROMPT_TEMPLATE'] = 'Шаблон промпта для анализа запроса';
+$MESS['MLK_SEARCHAI_SORT_PROPERTY'] = 'Свойство для сортировки по популярности';

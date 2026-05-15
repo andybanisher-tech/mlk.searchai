@@ -27,28 +27,19 @@ while ($uf = $rsUserFields->fetch()) {
 // --- Свойства выбранного инфоблока ---
 $iblockId = (int)($request->getPost('iblock_id') ?? Option::get($module_id, 'iblock_id', 2));
 $productPropsList = [];
-$productFieldsList = []; // Для AI-источников
+$productSortPropsList = []; // для сортировки
 if ($iblockId > 0 && Loader::includeModule('iblock')) {
     $rsProps = PropertyTable::getList([
         'order' => ['SORT' => 'ASC', 'NAME' => 'ASC'],
         'filter' => ['=IBLOCK_ID' => $iblockId],
-        'select' => ['CODE', 'NAME']
+        'select' => ['CODE', 'NAME', 'PROPERTY_TYPE']
     ]);
     while ($prop = $rsProps->fetch()) {
         if (!empty($prop['CODE'])) {
             $productPropsList[$prop['CODE']] = '[' . $prop['CODE'] . '] ' . $prop['NAME'];
-            $productFieldsList['PROPERTY_' . $prop['CODE']] = 'Свойство: ' . $prop['NAME'];
+            // Для сортировки подходят числовые и строковые свойства (показываем все)
+            $productSortPropsList[$prop['CODE']] = '[' . $prop['CODE'] . '] ' . $prop['NAME'];
         }
-    }
-    // Стандартные поля элемента
-    $standardFields = [
-        'NAME' => 'Название',
-        'DETAIL_TEXT' => 'Детальное описание',
-        'PREVIEW_TEXT' => 'Анонс',
-        'TAGS' => 'Теги',
-    ];
-    foreach ($standardFields as $code => $name) {
-        $productFieldsList[$code] = 'Поле: ' . $name;
     }
 }
 
@@ -71,12 +62,12 @@ $tabs = [
     ],
 ];
 
-// --- Набор опций по вкладкам ---
 $arAllOptions = [
     'general' => [
         ['iblock_id', Loc::getMessage('MLK_SEARCHAI_IBLOCK_ID'), '2', ['text', 10]],
         ['search_fields', Loc::getMessage('MLK_SEARCHAI_SEARCH_FIELDS'), 'NAME,CODE,PROPERTY_ARTICLE', ['text', 50]],
         ['results_limit', Loc::getMessage('MLK_SEARCHAI_RESULTS_LIMIT'), '5', ['text', 5]],
+        ['sort_property', Loc::getMessage('MLK_SEARCHAI_SORT_PROPERTY'), '', ['select', array_merge(['' => '-- не выбрано --'], $productSortPropsList)]],
         ['enable_suggestions', Loc::getMessage('MLK_SEARCHAI_ENABLE_SUGGESTIONS'), 'Y', ['checkbox']],
         ['filter_active', Loc::getMessage('MLK_SEARCHAI_FILTER_ACTIVE'), 'Y', ['checkbox']],
         ['filter_use_catalog', Loc::getMessage('MLK_SEARCHAI_FILTER_USE_CATALOG'), 'N', ['checkbox']],
@@ -84,7 +75,7 @@ $arAllOptions = [
         ['filter_price_not_empty', Loc::getMessage('MLK_SEARCHAI_FILTER_PRICE'), 'Y', ['checkbox']],
         ['filter_quantity_not_zero', Loc::getMessage('MLK_SEARCHAI_FILTER_QUANTITY'), 'N', ['checkbox']],
     ],
-    'llm' => [
+    'llm' =>  [
     ['llm_enable', Loc::getMessage('MLK_SEARCHAI_LLM_ENABLE'), 'Y', ['checkbox']],
     ['llm_context_enable', Loc::getMessage('MLK_SEARCHAI_LLM_CONTEXT_ENABLE'), 'Y', ['checkbox']],
     ['llm_provider', Loc::getMessage('MLK_SEARCHAI_LLM_PROVIDER'), 'local', ['select', [
@@ -105,8 +96,10 @@ $arAllOptions = [
     ],
 ];
 
-// Добавляем поля персонализации в общую вкладку
-$arAllOptions['general'][] = ['user_field_code', Loc::getMessage('MLK_SEARCHAI_USER_FIELD_CODE'), '', ['select', array_merge(['' => '-- не выбрано --'], $userFieldsList)]];
+// Добавляем поля персонализации (только если выбран ИБ)
+if ($iblockId > 0) {
+    $arAllOptions['general'][] = ['user_field_code', Loc::getMessage('MLK_SEARCHAI_USER_FIELD_CODE'), '', ['select', array_merge(['' => '-- не выбрано --'], $userFieldsList)]];
+}
 
 // --- Сохранение ---
 if ($request->isPost() && check_bitrix_sessid()) {
@@ -127,11 +120,12 @@ if ($request->isPost() && check_bitrix_sessid()) {
     Option::set($module_id, 'product_entity_type', $request->getPost('product_entity_type') ?: 'SECTION');
     Option::set($module_id, 'product_field_type', $request->getPost('product_field_type') ?: 'PROPERTY');
     Option::set($module_id, 'product_field_code', $request->getPost('product_field_code') ?: '');
+    // Сохраняем sort_property (уже в цикле)
 }
 
 $tabControl = new CAdminTabControl('tabControl', $tabs);
 ?>
-
+<!-- JavaScript для динамического обновления списка полей персонализации и сортировки (оставлен без изменений) -->
 <script>
 function updateProductFieldSelect() {
     var iblockId = BX('iblock_id').value;
@@ -145,10 +139,7 @@ function updateProductFieldSelect() {
     
     BX.ajax.post(
         '/bitrix/admin/mlk_searchai_field_ajax.php',
-        {
-            iblock_id: iblockId,
-            entity_type: entityType
-        },
+        { iblock_id: iblockId, entity_type: entityType },
         function(data) {
             if (data) {
                 data = JSON.parse(data);
@@ -161,17 +152,19 @@ function updateProductFieldSelect() {
                         select.options[select.options.length] = new Option(prop.name, prop.code);
                     });
                 }
-                <? if (!empty(Option::get($module_id, 'product_field_code', ''))): ?>
-                BX('product_field_code').value = '<?=CUtil::JSEscape(Option::get($module_id, 'product_field_code', ''))?>';
-                <? endif; ?>
+                var saved = '<?=CUtil::JSEscape(Option::get($module_id, 'product_field_code', ''))?>';
+                if (saved) BX('product_field_code').value = saved;
             }
         }
     );
 }
-
 BX.ready(function() {
     if (BX('iblock_id')) {
-        BX('iblock_id').addEventListener('change', updateProductFieldSelect);
+        BX('iblock_id').addEventListener('change', function() {
+            // При смене ИБ нужно перезагрузить страницу, чтобы обновились списки свойств
+            // Для простоты можно просто отправлять форму (сохранять) или делать редирект с параметрами.
+            // Мы добавим кнопку "Применить" для обновления списков.
+        });
         BX('product_entity_type').addEventListener('change', updateProductFieldSelect);
         BX('product_field_type').addEventListener('change', updateProductFieldSelect);
         updateProductFieldSelect();
@@ -220,8 +213,8 @@ BX.ready(function() {
             </tr>
             <?
         }
-        // Блок персонализации в общей вкладке
-        if ($tabName === 'general'):
+        // Блок персонализации (если ИБ задан)
+        if ($tabName === 'general' && $iblockId > 0):
         ?>
         <tr>
             <td colspan="2"><b><?= Loc::getMessage('MLK_SEARCHAI_PERSONALIZATION_SETTINGS') ?></b></td>

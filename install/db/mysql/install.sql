@@ -63,3 +63,6 @@ CREATE TABLE IF NOT EXISTS `b_searchai_embeddings` (
     `UPDATED_AT` datetime NOT NULL,
     PRIMARY KEY (`ITEM_ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Полнотекстовый индекс для поиска (если ещё не создан)
+ALTER TABLE b_iblock_element ADD FULLTEXT INDEX IX_MLK_SEARCH (NAME);
